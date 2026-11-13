@@ -1,0 +1,57 @@
+<section aria-labelledby="status-title" class="mx-auto max-w-2xl">
+  <h1 id="status-title" class="text-2xl font-semibold">Estado del sistema</h1>
+  <p class="mt-1 text-sm text-ink-muted">
+    Comprobación de conectividad entre la interfaz y la API de SmartDesk AI.
+  </p>
+
+  <div class="mt-6 rounded-lg border border-line bg-surface p-6 shadow-sm" aria-live="polite">
+    @switch (loadState()) {
+      @case ('loading') {
+        <p class="text-sm text-ink-muted">Consultando el estado de la API…</p>
+      }
+      @case ('error') {
+        <div role="alert" class="rounded-md bg-danger-50 p-4 text-sm text-danger-700">
+          No se pudo contactar con la API. Verifica que el backend esté en ejecución.
+        </div>
+        <button
+          type="button"
+          class="mt-4 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          (click)="loadHealth()"
+        >
+          Reintentar
+        </button>
+      }
+      @case ('success') {
+        @if (health(); as currentHealth) {
+          <dl class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-ink-muted">Estado</dt>
+              <dd class="mt-1">
+                <span
+                  class="inline-flex rounded-full px-2.5 py-0.5 text-sm font-medium"
+                  [class]="
+                    currentHealth.status === 'UP'
+                      ? 'bg-success-50 text-success-700'
+                      : 'bg-danger-50 text-danger-700'
+                  "
+                >
+                  {{ currentHealth.status === 'UP' ? 'Operativo' : 'Con fallos' }}
+                </span>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-ink-muted">Aplicación</dt>
+              <dd class="mt-1 text-sm font-medium">{{ currentHealth.application }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs uppercase tracking-wide text-ink-muted">Última respuesta</dt>
+              <dd class="mt-1 text-sm font-medium">
+                {{ currentHealth.timestamp | date: 'dd/MM/yyyy HH:mm:ss' }}
+              </dd>
+            </div>
+          </dl>
+        }
+      }
+    }
+  </div>
+</section>

@@ -1,0 +1,52 @@
+<div class="min-h-screen lg:grid lg:grid-cols-[16rem_1fr]">
+  <header
+    class="flex items-center justify-between border-b border-line bg-surface px-4 py-3 lg:hidden"
+  >
+    <a routerLink="/" class="text-base font-semibold text-brand-900">SmartDesk AI</a>
+    <button
+      type="button"
+      class="rounded-md p-2 text-ink-muted hover:bg-canvas"
+      aria-controls="main-navigation"
+      [attr.aria-expanded]="isMenuOpen()"
+      (click)="toggleMenu()"
+    >
+      @if (isMenuOpen()) {
+        <svg lucideX [size]="20" aria-hidden="true"></svg>
+        <span class="sr-only">Cerrar menú</span>
+      } @else {
+        <svg lucideMenu [size]="20" aria-hidden="true"></svg>
+        <span class="sr-only">Abrir menú</span>
+      }
+    </button>
+  </header>
+
+  <aside
+    class="border-b border-line bg-surface lg:block lg:min-h-screen lg:border-r lg:border-b-0"
+    [class.hidden]="!isMenuOpen()"
+  >
+    <div class="hidden px-6 py-5 lg:block">
+      <a routerLink="/" class="text-lg font-semibold text-brand-900">SmartDesk AI</a>
+      <p class="mt-1 text-xs text-ink-muted">Gestión inteligente de incidencias</p>
+    </div>
+
+    <nav id="main-navigation" aria-label="Navegación principal" class="px-3 py-3 lg:py-0">
+      <ul class="space-y-1">
+        <li>
+          <a
+            routerLink="/estado"
+            routerLinkActive="bg-brand-50 text-brand-700"
+            class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-ink-muted hover:bg-canvas"
+            (click)="closeMenu()"
+          >
+            <svg lucideActivity [size]="18" aria-hidden="true"></svg>
+            Estado del sistema
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="px-4 py-6 sm:px-8 lg:py-10">
+    <router-outlet />
+  </main>
+</div>
