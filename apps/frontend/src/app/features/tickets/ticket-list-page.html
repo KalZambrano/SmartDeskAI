@@ -1,0 +1,100 @@
+<section class="mx-auto max-w-6xl">
+  <header class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+    <div>
+      <p class="text-sm text-ink-muted">Mesa de ayuda</p>
+      <h1 class="mt-1 text-2xl font-semibold tracking-tight">{{ heading() }}</h1>
+      <p class="mt-1 text-sm text-ink-muted">
+        Consulta el estado y seguimiento de las solicitudes de soporte.
+      </p>
+    </div>
+    @if (canCreate()) {
+      <a
+        routerLink="/incidencias/nueva"
+        class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+        >Nueva incidencia</a
+      >
+    }
+  </header>
+
+  @if (error()) {
+    <div
+      class="mt-6 rounded-xl border border-red-200 bg-danger-50 p-4 text-sm text-danger-700"
+      role="alert"
+    >
+      {{ error() }}
+    </div>
+  } @else if (loading()) {
+    <div
+      class="mt-6 rounded-xl border border-line bg-white p-8 text-sm text-ink-muted"
+      role="status"
+    >
+      Cargando incidencias…
+    </div>
+  } @else if (tickets().length === 0) {
+    <div class="mt-6 rounded-xl border border-line bg-white px-6 py-14 text-center shadow-sm">
+      <h2 class="text-base font-semibold">Aún no hay incidencias</h2>
+      <p class="mt-2 text-sm text-ink-muted">
+        Cuando se registre o asigne una solicitud, aparecerá aquí.
+      </p>
+      @if (canCreate()) {
+        <a
+          routerLink="/incidencias/nueva"
+          class="mt-5 inline-flex rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+          >Registrar incidencia</a
+        >
+      }
+    </div>
+  } @else {
+    <div class="mt-6 overflow-hidden rounded-xl border border-line bg-white shadow-sm">
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[760px] text-left text-sm">
+          <thead
+            class="border-b border-line bg-canvas text-xs font-semibold uppercase tracking-wide text-ink-muted"
+          >
+            <tr>
+              <th class="px-5 py-4">Incidencia</th>
+              <th class="px-5 py-4">Categoría</th>
+              <th class="px-5 py-4">Prioridad</th>
+              <th class="px-5 py-4">Estado</th>
+              <th class="px-5 py-4">Técnico</th>
+              <th class="px-5 py-4">Creada</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            @for (ticket of tickets(); track ticket.id) {
+              <tr class="hover:bg-slate-50/70">
+                <td class="px-5 py-4">
+                  <a
+                    class="font-semibold text-brand-700 hover:underline"
+                    [routerLink]="[ticket.id]"
+                    >{{ ticket.ticketCode }}</a
+                  >
+                  <p class="mt-1 max-w-sm truncate text-xs text-ink-muted">{{ ticket.title }}</p>
+                </td>
+                <td class="px-5 py-4 text-ink-muted">
+                  {{ ticket.categoryName || 'Sin categoría' }}
+                </td>
+                <td class="px-5 py-4">{{ priorityLabel(ticket.priority) }}</td>
+                <td class="px-5 py-4">
+                  <span
+                    class="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700"
+                    >{{ statusLabel(ticket.status) }}</span
+                  >
+                </td>
+                <td class="px-5 py-4 text-ink-muted">
+                  {{ ticket.assignedTechnicianName || 'Sin asignar' }}
+                </td>
+                <td class="whitespace-nowrap px-5 py-4 text-xs text-ink-muted">
+                  {{ ticket.createdAt | date: 'short' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="border-t border-line px-5 py-3 text-xs text-ink-muted">
+        {{ tickets().length }} {{ tickets().length === 1 ? 'incidencia' : 'incidencias' }}
+      </p>
+    </div>
+  }
+</section>

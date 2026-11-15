@@ -33,7 +33,7 @@ export class TicketService {
   addComment(id: number, content: string): Observable<TicketComment> {
     return this.http.post<TicketComment>(this.api + '/' + id + '/comments', { content });
   }
-  changeStatus(id: number, status: TicketStatus): Observable<unknown> {
-    return this.http.patch(this.api + '/' + id + '/status', { status });
+  changeStatus(id: number, status: TicketStatus): Observable<TicketSummary> {
+    return this.http.patch<TicketSummary>(this.api + '/' + id + '/status', { status });
   }
 }

@@ -33,5 +33,5 @@ export interface CreateTicketRequest {
   title: string;
   description: string;
   priority: TicketPriority;
-  categoryId?: number;
+  categoryId?: number | null;
 }
