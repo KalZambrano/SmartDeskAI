@@ -55,4 +55,14 @@ public class Category {
     public boolean isActive() {
         return active;
     }
+
+    public void update(String name, String code, String description) {
+        this.name = name;
+        this.code = code;
+        this.description = description;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
 }
