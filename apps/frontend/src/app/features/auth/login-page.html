@@ -1,0 +1,84 @@
+<main class="grid min-h-screen bg-white lg:grid-cols-[1.05fr_0.95fr]">
+  <section
+    class="relative hidden overflow-hidden bg-slate-950 p-12 text-white lg:flex lg:flex-col lg:justify-between"
+  >
+    <div class="absolute -right-28 -top-24 h-96 w-96 rounded-full bg-blue-600/25 blur-3xl"></div>
+    <div class="absolute -bottom-32 -left-20 h-96 w-96 rounded-full bg-cyan-500/15 blur-3xl"></div>
+    <a
+      routerLink="/login"
+      class="relative flex items-center gap-3 text-lg font-semibold tracking-tight"
+    >
+      <span class="grid h-10 w-10 place-items-center rounded-xl bg-blue-500 text-white">S</span>
+      SmartDesk <span class="text-blue-300">AI</span>
+    </a>
+    <div class="relative max-w-xl pb-12">
+      <p class="mb-5 text-sm font-semibold uppercase tracking-[0.2em] text-blue-300">
+        Mesa de ayuda inteligente
+      </p>
+      <h1 class="text-5xl font-semibold leading-tight tracking-tight">
+        El soporte que tu equipo necesita.
+      </h1>
+      <p class="mt-6 max-w-lg text-lg leading-8 text-slate-300">
+        Centraliza solicitudes, da seguimiento a cada incidencia y ayuda a tu equipo a resolverlas
+        con claridad.
+      </p>
+    </div>
+    <p class="relative text-sm text-slate-400">SmartDesk AI · Gestión de soporte TI</p>
+  </section>
+
+  <section class="flex min-h-screen items-center justify-center px-6 py-12">
+    <div class="w-full max-w-md">
+      <a
+        routerLink="/login"
+        class="mb-12 flex items-center gap-2 text-lg font-semibold text-slate-900 lg:hidden"
+      >
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-blue-600 text-white">S</span>
+        SmartDesk <span class="text-blue-600">AI</span>
+      </a>
+      <p class="text-sm font-medium text-blue-700">Bienvenido de nuevo</p>
+      <h2 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Inicia sesión</h2>
+      <p class="mt-2 text-sm leading-6 text-slate-500">
+        Ingresa tus credenciales para continuar al espacio de soporte.
+      </p>
+
+      <form class="mt-8 space-y-5" [formGroup]="form" (ngSubmit)="submit()">
+        <label class="block text-sm font-medium text-slate-700">
+          Correo electrónico
+          <input
+            pInputText
+            class="mt-2 w-full !bg-white !text-slate-900"
+            type="email"
+            formControlName="email"
+            autocomplete="username"
+            placeholder="nombre@empresa.com"
+          />
+        </label>
+        <label class="block text-sm font-medium text-slate-700">
+          Contraseña
+          <input
+            pInputText
+            class="mt-2 w-full !bg-white !text-slate-900"
+            type="password"
+            formControlName="password"
+            autocomplete="current-password"
+            placeholder="Tu contraseña"
+          />
+        </label>
+        @if (error()) {
+          <p role="alert" class="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+            {{ error() }}
+          </p>
+        }
+        <button
+          class="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+          [disabled]="form.invalid || loading()"
+        >
+          {{ loading() ? 'Ingresando…' : 'Ingresar a mi cuenta' }}
+        </button>
+      </form>
+      <p class="mt-8 text-center text-xs leading-5 text-slate-400">
+        Acceso exclusivo para usuarios de SmartDesk AI.
+      </p>
+    </div>
+  </section>
+</main>

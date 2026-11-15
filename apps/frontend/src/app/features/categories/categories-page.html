@@ -1,0 +1,227 @@
+<section class="mx-auto max-w-6xl">
+  <p class="text-sm font-medium text-brand-700">Maestros</p>
+  <header class="mt-1 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Categorías</h1>
+      <p class="mt-1 text-sm text-ink-muted">
+        Administra las categorías disponibles al registrar incidencias.
+      </p>
+    </div>
+    <button
+      type="button"
+      class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+      (click)="create()"
+    >
+      <svg lucidePlus [size]="18" aria-hidden="true"></svg>
+      Nueva categoría
+    </button>
+  </header>
+
+  @if (error() && !modalOpen()) {
+    <p role="alert" class="mt-5 rounded-lg bg-danger-50 px-4 py-3 text-sm text-danger-700">
+      {{ error() }}
+    </p>
+  }
+  @if (notice()) {
+    <p role="status" class="mt-5 rounded-lg bg-success-50 px-4 py-3 text-sm text-success-700">
+      {{ notice() }}
+    </p>
+  }
+
+  <section class="mt-6 overflow-hidden rounded-xl border border-line bg-white shadow-sm">
+    <div class="border-b border-line px-5 py-4 sm:px-6">
+      <h2 class="text-base font-semibold">Categorías registradas</h2>
+      <p class="mt-1 text-xs text-ink-muted">
+        Las categorías desactivadas se conservan para el historial.
+      </p>
+    </div>
+
+    @if (loading()) {
+      <p class="p-6 text-sm text-ink-muted" role="status">Cargando categorías…</p>
+    } @else if (categories().length === 0) {
+      <div class="px-6 py-12 text-center">
+        <p class="text-sm text-ink-muted">No hay categorías registradas.</p>
+        <button
+          type="button"
+          class="mt-3 text-sm font-semibold text-brand-700 hover:underline"
+          (click)="create()"
+        >
+          Crear la primera categoría
+        </button>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[620px] text-left text-sm">
+          <thead
+            class="border-b border-line bg-canvas text-xs font-semibold uppercase tracking-wide text-ink-muted"
+          >
+            <tr>
+              <th class="px-5 py-3.5">Categoría</th>
+              <th class="px-5 py-3.5">Código</th>
+              <th class="px-5 py-3.5">Estado</th>
+              <th class="px-5 py-3.5 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            @for (category of categories(); track category.id) {
+              <tr class="hover:bg-slate-50/70">
+                <td class="px-5 py-4">
+                  <p class="font-medium text-ink">{{ category.name }}</p>
+                  @if (category.description) {
+                    <p class="mt-1 max-w-xl text-xs text-ink-muted">{{ category.description }}</p>
+                  }
+                </td>
+                <td class="px-5 py-4">
+                  <span class="rounded bg-canvas px-2 py-1 font-mono text-xs text-ink-muted">{{
+                    category.code
+                  }}</span>
+                </td>
+                <td class="px-5 py-4">
+                  <span
+                    class="rounded-full px-2.5 py-1 text-xs font-medium"
+                    [class.bg-success-50]="category.active"
+                    [class.text-success-700]="category.active"
+                    [class.bg-canvas]="!category.active"
+                    [class.text-ink-muted]="!category.active"
+                    >{{ category.active ? 'Activa' : 'Inactiva' }}</span
+                  >
+                </td>
+                <td class="px-5 py-4">
+                  <div class="flex justify-end gap-1">
+                    <button
+                      type="button"
+                      class="rounded-md p-2 text-ink-muted transition hover:bg-brand-50 hover:text-brand-700"
+                      [attr.aria-label]="'Editar categoría ' + category.name"
+                      title="Editar"
+                      (click)="edit(category)"
+                    >
+                      <svg lucidePencil [size]="17" aria-hidden="true"></svg>
+                    </button>
+                    @if (category.active) {
+                      <button
+                        type="button"
+                        class="rounded-md p-2 text-ink-muted transition hover:bg-danger-50 hover:text-danger-700"
+                        [attr.aria-label]="'Desactivar categoría ' + category.name"
+                        title="Desactivar"
+                        (click)="deactivate(category)"
+                      >
+                        <svg lucidePower [size]="17" aria-hidden="true"></svg>
+                      </button>
+                    } @else {
+                      <button
+                        type="button"
+                        class="rounded-md p-2 text-ink-muted transition hover:bg-success-50 hover:text-success-700"
+                        [attr.aria-label]="'Activar categoría ' + category.name"
+                        title="Activar"
+                        (click)="setActive(category, true)"
+                      >
+                        <svg lucideRotateCcw [size]="17" aria-hidden="true"></svg>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</section>
+
+@if (modalOpen()) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+    role="presentation"
+    (click)="dismissOnBackdrop($event)"
+    (keydown.escape)="closeModal()"
+  >
+    <section
+      class="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl border border-line bg-white shadow-2xl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="category-dialog-title"
+    >
+      <header class="flex items-center justify-between border-b border-line px-5 py-4 sm:px-6">
+        <h2 id="category-dialog-title" class="text-lg font-semibold">
+          {{ editing() ? 'Editar categoría' : 'Nueva categoría' }}
+        </h2>
+        <button
+          type="button"
+          class="rounded-md p-2 text-ink-muted hover:bg-canvas"
+          aria-label="Cerrar ventana"
+          [disabled]="saving()"
+          (click)="closeModal()"
+        >
+          <svg lucideX [size]="18" aria-hidden="true"></svg>
+        </button>
+      </header>
+      <form class="space-y-4" [formGroup]="form" (ngSubmit)="save()">
+        <div class="space-y-4 px-5 py-5 sm:px-6">
+          <label for="category-name" class="block text-sm font-medium text-ink">
+            Nombre
+            <input
+              id="category-name"
+              pInputText
+              class="mt-2 w-full !bg-white !text-ink"
+              formControlName="name"
+              maxlength="80"
+              placeholder="Ej. Hardware"
+            />
+          </label>
+          <label for="category-code" class="block text-sm font-medium text-ink">
+            Código
+            <input
+              id="category-code"
+              pInputText
+              class="mt-2 w-full !bg-white !text-ink"
+              formControlName="code"
+              maxlength="30"
+              placeholder="Ej. HARDWARE"
+              autocomplete="off"
+            />
+            <span class="mt-1 block text-xs font-normal text-ink-muted"
+              >Letras, números, guion y guion bajo. Se guardará en mayúsculas.</span
+            >
+          </label>
+          <label for="category-description" class="block text-sm font-medium text-ink">
+            Descripción <span class="font-normal text-ink-muted">(opcional)</span>
+            <textarea
+              id="category-description"
+              pTextarea
+              class="mt-2 !h-28 !min-h-28 !max-h-28 !resize-none w-full overflow-y-auto !bg-white !text-ink"
+              formControlName="description"
+              maxlength="255"
+              rows="4"
+              placeholder="Describe qué tipo de solicitudes incluye"
+            ></textarea>
+          </label>
+
+          @if (error() && modalOpen()) {
+            <p role="alert" class="rounded-lg bg-danger-50 px-3 py-2.5 text-sm text-danger-700">
+              {{ error() }}
+            </p>
+          }
+        </div>
+
+        <div class="flex justify-end gap-2 border-t border-line px-5 py-4 sm:px-6">
+          <button
+            type="button"
+            class="rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink-muted hover:bg-canvas disabled:opacity-50"
+            [disabled]="saving()"
+            (click)="closeModal()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+            [disabled]="form.invalid || saving()"
+          >
+            {{ saving() ? 'Guardando…' : editing() ? 'Guardar cambios' : 'Crear categoría' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}

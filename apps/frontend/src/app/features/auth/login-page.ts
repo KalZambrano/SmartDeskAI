@@ -1,13 +1,14 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '@/core/services/auth.service';
+import { InputTextModule } from 'primeng/inputtext';
 
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule],
-  template:
-    '<main class="grid min-h-screen place-items-center bg-canvas px-4"><section class="w-full max-w-md rounded-xl border border-line bg-white p-8 shadow-sm"><p class="text-sm font-semibold text-brand-700">SMARTDESK AI</p><h1 class="mt-2 text-2xl font-semibold">Iniciar sesión</h1><form class="mt-6 space-y-4" [formGroup]="form" (ngSubmit)="submit()"><label class="block text-sm font-medium">Correo<input class="mt-1 w-full rounded-md border border-line px-3 py-2" type="email" formControlName="email" autocomplete="username"></label><label class="block text-sm font-medium">Contraseña<input class="mt-1 w-full rounded-md border border-line px-3 py-2" type="password" formControlName="password" autocomplete="current-password"></label>@if (error()) { <p role="alert" class="text-sm text-danger-700">{{ error() }}</p> }<button class="w-full rounded-md bg-brand-600 px-4 py-2 font-medium text-white disabled:opacity-50" [disabled]="form.invalid || loading()">{{ loading() ? "Ingresando…" : "Ingresar" }}</button></form></section></main>',
+  imports: [ReactiveFormsModule, RouterLink, InputTextModule],
+  templateUrl: './login-page.html',
 })
 export class LoginPage {
   private readonly fb = inject(FormBuilder);

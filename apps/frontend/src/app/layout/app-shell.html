@@ -1,4 +1,4 @@
-<div class="min-h-screen lg:grid lg:grid-cols-[16rem_1fr]">
+<div class="min-h-screen bg-canvas lg:grid lg:grid-cols-[16rem_1fr]">
   <header
     class="flex items-center justify-between border-b border-line bg-surface px-4 py-3 lg:hidden"
   >
@@ -21,7 +21,7 @@
   </header>
 
   <aside
-    class="border-b border-line bg-surface lg:block lg:min-h-screen lg:border-r lg:border-b-0"
+    class="flex flex-col border-b border-line bg-surface lg:!flex lg:min-h-screen lg:border-r lg:border-b-0"
     [class.hidden]="!isMenuOpen()"
   >
     <div class="hidden px-6 py-5 lg:block">
@@ -29,8 +29,32 @@
       <p class="mt-1 text-xs text-ink-muted">Gestión inteligente de incidencias</p>
     </div>
 
-    <nav id="main-navigation" aria-label="Navegación principal" class="px-3 py-3 lg:py-0">
+    <nav id="main-navigation" aria-label="Navegación principal" class="flex-1 px-3 py-3 lg:py-0">
       <ul class="space-y-1">
+        <li>
+          <a
+            routerLink="/incidencias"
+            routerLinkActive="bg-brand-50 text-brand-700"
+            class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-ink-muted hover:bg-canvas"
+            (click)="closeMenu()"
+          >
+            <svg lucideTicket [size]="18" aria-hidden="true"></svg>
+            Incidencias
+          </a>
+        </li>
+        @if (canCreateTicket()) {
+          <li>
+            <a
+              routerLink="/incidencias/nueva"
+              routerLinkActive="bg-brand-50 text-brand-700"
+              class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-ink-muted hover:bg-canvas"
+              (click)="closeMenu()"
+            >
+              <svg lucideTicket [size]="18" aria-hidden="true"></svg>
+              Registrar incidencia
+            </a>
+          </li>
+        }
         <li>
           <a
             routerLink="/estado"
@@ -43,7 +67,40 @@
           </a>
         </li>
       </ul>
+      @if (canManageMasters()) {
+        <div class="mt-6 border-t border-line pt-5">
+          <p class="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
+            Maestros
+          </p>
+          <ul class="space-y-1">
+            <li>
+              <a
+                routerLink="/maestros/categorias"
+                routerLinkActive="bg-brand-50 text-brand-700"
+                class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-ink-muted hover:bg-canvas"
+                (click)="closeMenu()"
+              >
+                <span class="ml-1 h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true"></span>
+                Categorías
+              </a>
+            </li>
+          </ul>
+        </div>
+      }
     </nav>
+    <div class="border-t border-line p-4">
+      <p class="truncate text-sm font-medium text-ink">{{ user()?.fullName }}</p>
+      <p class="truncate text-xs font-medium text-brand-700">{{ roleLabel() }}</p>
+      <p class="mb-3 truncate text-xs text-ink-muted">{{ user()?.email }}</p>
+      <button
+        type="button"
+        class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-ink-muted hover:bg-danger-50 hover:text-danger-700"
+        (click)="logout()"
+      >
+        <svg lucideLogOut [size]="18" aria-hidden="true"></svg>
+        Cerrar sesión
+      </button>
+    </div>
   </aside>
 
   <main class="px-4 py-6 sm:px-8 lg:py-10">

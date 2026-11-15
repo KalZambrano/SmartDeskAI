@@ -14,7 +14,7 @@ describe('App', () => {
     }).compileComponents();
   });
 
-  it('redirige al inicio de sesión sin sesión activa y muestra la navegación principal', async () => {
+  it('redirige al inicio de sesión sin sesión activa', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);
 
@@ -23,7 +23,6 @@ describe('App', () => {
 
     const root: HTMLElement = fixture.nativeElement;
     expect(router.url).toBe('/login');
-    expect(root.querySelector('nav[aria-label="Navegación principal"]')).not.toBeNull();
-    expect(root.querySelector('h1')?.textContent).toContain('Iniciar sesión');
+    expect(root.querySelector('h2')?.textContent).toContain('Inicia sesión');
   });
 });

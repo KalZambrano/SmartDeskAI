@@ -23,6 +23,15 @@ export class AuthService {
     );
   }
 
+  currentUser(): Observable<AuthUser> {
+    return this.http.get<AuthUser>(this.apiBaseUrl + '/auth/me').pipe(
+      tap((user) => {
+        this.userState.set(user);
+        localStorage.setItem('smartdesk.user', JSON.stringify(user));
+      }),
+    );
+  }
+
   logout(): void {
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem('smartdesk.user');
