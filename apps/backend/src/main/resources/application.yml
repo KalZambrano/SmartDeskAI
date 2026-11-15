@@ -1,6 +1,9 @@
 spring:
   application:
     name: smartdesk-ai
+  config:
+    # Credenciales locales opcionales (apps/backend/local.properties). No existe en Docker.
+    import: optional:file:./local.properties,optional:file:./apps/backend/local.properties
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/smartdesk}
     username: ${POSTGRES_USER:smartdesk}

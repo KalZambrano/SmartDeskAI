@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+apps/backend/local.properties
 
 # Node / Angular
 node_modules/
