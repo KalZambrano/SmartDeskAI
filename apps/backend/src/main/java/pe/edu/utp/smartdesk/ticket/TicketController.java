@@ -43,7 +43,8 @@ public class TicketController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Título y descripción requeridos");
         TicketPriority priority=req.priority()==null?TicketPriority.MEDIUM:req.priority();
         Instant now=Instant.now();
-        Ticket t=tickets.save(new Ticket("SD-"+String.format("%06d", System.currentTimeMillis()%1000000),req.title().trim(),req.description().trim(),priority,u,
+        String code="SD-"+String.format("%06d", tickets.nextTicketCode());
+        Ticket t=tickets.save(new Ticket(code,req.title().trim(),req.description().trim(),priority,u,
             now.plus(switch(priority){case LOW->24;case MEDIUM->12;case HIGH->4;case CRITICAL->1;},ChronoUnit.HOURS)));
         if(req.categoryId()!=null) t.setCategory(categories.findById(req.categoryId()).orElseThrow(()->new ResponseStatusException(HttpStatus.BAD_REQUEST,"Categoría no válida")));
         history.save(new TicketHistory(t,u,"CREATED",null,t.getStatus().name(),"Incidencia registrada"));
@@ -71,7 +72,8 @@ public class TicketController {
     @Transactional
     public TicketDto status(@PathVariable Long id,@RequestBody StatusRequest req,Authentication auth) {
         User user=actor(auth); Ticket t=allowed(id,user);
-        if(user.getRole()==Role.REQUESTER || (user.getRole()==Role.TECHNICIAN && !t.getAssignedTechnician().getId().equals(user.getId())))
+        if(user.getRole()==Role.REQUESTER || (user.getRole()==Role.TECHNICIAN
+                && (t.getAssignedTechnician()==null || !t.getAssignedTechnician().getId().equals(user.getId()))))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         TicketStatus next;
         try { next=TicketStatus.valueOf(req.status()); } catch(Exception ex) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Estado inválido"); }
