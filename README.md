@@ -27,20 +27,57 @@ docker compose up --build -d
 docker compose logs -f
 docker compose down
 
+En PowerShell:
+
+    Copy-Item .env.example .env
+
 Abre http://localhost:4200 o http://localhost:8080/api/v1/health.
 
-## Preparar la primera cuenta (Fase 1)
+## Datos de demostración (Fase 1)
 
-Con PostgreSQL y backend en ejecución, crea el primer administrador una sola vez desde PowerShell:
+Con el stack levantado, crea el administrador, el solicitante y el técnico. El script es idempotente, así que puedes repetirlo sin miedo:
 
-    $payload = @{ fullName = "Administrador"; email = "admin@smartdesk.local"; password = "CambiaEstaClavePorUnaDe12+" } | ConvertTo-Json
+    pwsh infra/scripts/seed-demo.ps1        # Windows
+    bash infra/scripts/seed-demo.sh         # Linux, macOS o contenedor
+
+Credenciales resultantes (contraseña `SmartDeskDemo2026!`):
+
+| Rol | Correo |
+|---|---|
+| Administrador | admin@smartdesk.local |
+| Solicitante | solicitante@smartdesk.local |
+| Técnico | tecnico@smartdesk.local |
+
+Si prefieres hacerlo a mano, el administrador inicial se crea una sola vez:
+
+    $payload = @{ fullName = "Administrador"; email = "admin@smartdesk.local"; password = "SmartDeskDemo2026!" } | ConvertTo-Json
     Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/v1/auth/bootstrap -ContentType "application/json" -Body $payload
 
-La ruta de inicialización se cierra cuando existe el primer usuario. Luego inicia sesión con esas credenciales. Crea cuentas de solicitantes y técnicos desde base de datos hasta implementar administración de usuarios.
+La ruta `/api/v1/auth/bootstrap` se cierra automáticamente cuando existe el primer usuario.
+
+## Ejecutar solo el backend en local
+
+Si PostgreSQL ya corre en Docker (puerto 5432) y el frontend con `pnpm start`, el backend puede levantarse fuera de Docker:
+
+    cd apps/backend
+    mvn spring-boot:run
+
+Sin Maven (usando el jar compilado): `java -jar target/smartdesk-backend.jar`.
+
+Las credenciales se leen de `apps/backend/local.properties`, un archivo **no versionado** que Spring importa automáticamente. Si no existe, créalo con la contraseña de tu PostgreSQL local:
+
+    spring.datasource.url=jdbc:postgresql://localhost:5432/smartdesk
+    spring.datasource.username=smartdesk
+    spring.datasource.password=tu_clave
+
+El frontend de desarrollo proxea `/api` hacia `http://localhost:8080` (ver `apps/frontend/proxy.conf.json`).
+
+Docker y ejecución local no pueden usar el mismo puerto: detén el contenedor con `docker compose stop backend` antes de iniciar el backend local.
 
 ## Estructura
 
 apps/frontend   Angular servido mediante Nginx en el contenedor
 apps/backend    Spring Boot organizado por módulos de dominio
+infra/scripts   Scripts de apoyo (seed de datos de demostración)
 docs/           Documentación técnica y decisiones
 .github/        Workflows de CI/CD y plantillas
