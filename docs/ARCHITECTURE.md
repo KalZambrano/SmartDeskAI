@@ -1,6 +1,6 @@
 # Arquitectura y decisiones técnicas
 
-La arquitectura de alto nivel está en la especificación del proyecto. Este documento registra las decisiones tomadas al implementar la Fase 0.
+La arquitectura de alto nivel está en la especificación del proyecto. Este documento registra las decisiones tomadas al implementar las fases.
 
 ## Decisiones de la Fase 0
 
@@ -23,3 +23,13 @@ La arquitectura de alto nivel está en la especificación del proyecto. Este doc
 - Publicación de imágenes en GHCR.
 - Modelo Gemini disponible en el nivel gratuito.
 - Confirmación con el docente de la sustitución de OpenAI por Gemini.
+
+## Decisiones de la Fase 3
+
+| Tema | Decisión | Motivo |
+|---|---|---|
+| Clasificación | Contrato TicketClassifier, proveedor Gemini y fallback local separados | Permite sustituir el proveedor y mantener la creación disponible |
+| Datos a Gemini | Solo título y descripción; categorías activas se envían como opciones válidas | Evita enviar identidad y limita la salida al catálogo actual |
+| Modelo | Configuración obligatoria con GEMINI_MODEL; sin nombre predeterminado | El modelo disponible y la cuota dependen de la cuenta y región |
+| Persistencia | Campos sugeridos separados de categoría y prioridad seleccionadas | La clasificación es una recomendación, no una decisión del sistema |
+| Nueva clasificación | Solo al registrar o por acción explícita de actualizar | Evita llamadas repetidas y consumo inesperado de cuota |
