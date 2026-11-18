@@ -21,7 +21,7 @@
   </header>
 
   <aside
-    class="flex flex-col border-b border-line bg-surface lg:!flex lg:min-h-screen lg:border-r lg:border-b-0"
+    class="flex flex-col border-b border-line bg-surface lg:!flex lg:!h-screen lg:!min-h-0 lg:!self-start lg:sticky lg:top-0 lg:border-r lg:border-b-0"
     [class.hidden]="!isMenuOpen()"
   >
     <div class="hidden px-6 py-5 lg:block">
@@ -29,7 +29,11 @@
       <p class="mt-1 text-xs text-ink-muted">Gestión inteligente de incidencias</p>
     </div>
 
-    <nav id="main-navigation" aria-label="Navegación principal" class="flex-1 px-3 py-3 lg:py-0">
+    <nav
+      id="main-navigation"
+      aria-label="Navegación principal"
+      class="min-h-0 flex-1 overflow-y-auto px-3 py-3 lg:py-0"
+    >
       <ul class="space-y-1">
         <li>
           <a
