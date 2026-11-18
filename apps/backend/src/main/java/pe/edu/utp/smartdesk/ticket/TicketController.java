@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import pe.edu.utp.smartdesk.comment.TicketComment;
 import pe.edu.utp.smartdesk.comment.TicketCommentRepository;
+import pe.edu.utp.smartdesk.ai.TicketClassification;
+import pe.edu.utp.smartdesk.ai.TicketClassificationService;
 import pe.edu.utp.smartdesk.user.*;
 
 @RestController
@@ -20,19 +22,25 @@ public class TicketController {
     private final TicketCommentRepository comments;
     private final UserRepository users;
     private final pe.edu.utp.smartdesk.category.CategoryRepository categories;
+    private final TicketClassificationService classifier;
     public TicketController(TicketRepository tickets, TicketHistoryRepository history, TicketCommentRepository comments,
-            UserRepository users, pe.edu.utp.smartdesk.category.CategoryRepository categories) {
+            UserRepository users, pe.edu.utp.smartdesk.category.CategoryRepository categories, TicketClassificationService classifier) {
         this.tickets=tickets; this.history=history; this.comments=comments; this.users=users; this.categories=categories;
+        this.classifier=classifier;
     }
     @GetMapping
-    public List<TicketDto> list(Authentication auth) {
+    public List<TicketDto> list(Authentication auth,
+            @RequestParam(required = false) TicketStatus status,
+            @RequestParam(required = false) TicketPriority priority,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String q) {
         User u=actor(auth);
-        List<Ticket> rows=switch(u.getRole()) {
-            case ADMIN -> tickets.findAllByOrderByCreatedAtDesc();
-            case TECHNICIAN -> tickets.findByAssignedTechnicianIdOrderByCreatedAtDesc(u.getId());
-            case REQUESTER -> tickets.findByRequesterIdOrderByCreatedAtDesc(u.getId());
-        };
-        return rows.stream().map(this::dto).toList();
+        Long requesterId=u.getRole()==Role.REQUESTER ? u.getId() : null;
+        Long technicianId=u.getRole()==Role.TECHNICIAN ? u.getId() : null;
+        String query=q==null || q.isBlank() ? null : q.trim();
+        if(query!=null && query.length()>100) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Búsqueda demasiado larga");
+        return tickets.search(requesterId,technicianId,status,priority,categoryId,query)
+                .stream().map(this::dto).toList();
     }
     @PostMapping
     @Transactional
@@ -47,11 +55,23 @@ public class TicketController {
         Ticket t=tickets.save(new Ticket(code,req.title().trim(),req.description().trim(),priority,u,
             now.plus(switch(priority){case LOW->24;case MEDIUM->12;case HIGH->4;case CRITICAL->1;},ChronoUnit.HOURS)));
         if(req.categoryId()!=null) t.setCategory(categories.findById(req.categoryId()).orElseThrow(()->new ResponseStatusException(HttpStatus.BAD_REQUEST,"Categoría no válida")));
+        applyClassification(t, classifier.classify(t.getTitle(), t.getDescription(), categories.findByActiveTrueOrderByNameAsc()));
         history.save(new TicketHistory(t,u,"CREATED",null,t.getStatus().name(),"Incidencia registrada"));
         return dto(tickets.save(t));
     }
     @GetMapping("/{id}")
     public TicketDto get(@PathVariable Long id, Authentication auth) { return dto(allowed(id,actor(auth))); }
+    @PostMapping("/{id}/ai-analysis")
+    @Transactional
+    public TicketDto reclassify(@PathVariable Long id, Authentication auth) {
+        User user=actor(auth); Ticket ticket=allowed(id,user);
+        applyClassification(ticket, classifier.classify(ticket.getTitle(), ticket.getDescription(), categories.findByActiveTrueOrderByNameAsc()));
+        tickets.save(ticket);
+        history.save(new TicketHistory(ticket,user,"AI_CLASSIFIED",ticket.getAiClassificationSource(),
+                ticket.getAiSuggestedCategory()==null?null:ticket.getAiSuggestedCategory().getName(),
+                ticket.getAiClassificationSource().equals("AI")?"Sugerencias actualizadas con Gemini":"Sugerencias actualizadas con reglas locales"));
+        return dto(ticket);
+    }
     @PutMapping("/{id}")
     @Transactional
     public TicketDto update(@PathVariable Long id,@RequestBody UpdateRequest req,Authentication auth) {
@@ -123,13 +143,17 @@ public class TicketController {
                 || (u.getRole()==Role.TECHNICIAN && t.getAssignedTechnician()!=null && t.getAssignedTechnician().getId().equals(u.getId()));
         if(!ok) throw new ResponseStatusException(HttpStatus.FORBIDDEN); return t;
     }
-    private TicketDto dto(Ticket t) { return new TicketDto(t.getId(),t.getTicketCode(),t.getTitle(),t.getDescription(),t.getCategory()==null?null:t.getCategory().getName(),t.getPriority().name(),t.getStatus().name(),t.getRequester().getFullName(),t.getAssignedTechnician()==null?null:t.getAssignedTechnician().getFullName(),t.getCreatedAt(),t.getDueAt()); }
+    private void applyClassification(Ticket ticket, TicketClassification result) {
+        var category=result.categoryCode()==null?null:categories.findByCodeIgnoreCaseAndActiveTrue(result.categoryCode()).orElse(null);
+        ticket.setAiClassification(category,result.priority(),result.summary(),result.suggestedResponse(),result.reason(),result.source());
+    }
+    private TicketDto dto(Ticket t) { return new TicketDto(t.getId(),t.getTicketCode(),t.getTitle(),t.getDescription(),t.getCategory()==null?null:t.getCategory().getName(),t.getPriority().name(),t.getStatus().name(),t.getRequester().getFullName(),t.getAssignedTechnician()==null?null:t.getAssignedTechnician().getFullName(),t.getCreatedAt(),t.getDueAt(),t.getAiSuggestedCategory()==null?null:t.getAiSuggestedCategory().getName(),t.getAiSuggestedPriority()==null?null:t.getAiSuggestedPriority().name(),t.getAiSummary(),t.getAiSuggestedResponse(),t.getAiReason(),t.getAiClassificationSource()); }
     public record CreateRequest(String title,String description,TicketPriority priority,Long categoryId) {}
     public record UpdateRequest(String title,String description,TicketPriority priority) {}
     public record StatusRequest(String status) {}
     public record AssignmentRequest(Long technicianId) {}
     public record CommentRequest(String content) {}
-    public record TicketDto(Long id,String ticketCode,String title,String description,String categoryName,String priority,String status,String requesterName,String assignedTechnicianName,Instant createdAt,Instant dueAt) {}
+    public record TicketDto(Long id,String ticketCode,String title,String description,String categoryName,String priority,String status,String requesterName,String assignedTechnicianName,Instant createdAt,Instant dueAt,String aiSuggestedCategoryName,String aiSuggestedPriority,String aiSummary,String aiSuggestedResponse,String aiReason,String aiClassificationSource) {}
     public record CommentDto(Long id,String authorName,String content,Instant createdAt) {}
     public record HistoryDto(Long id,String eventType,String description,Instant createdAt) {}
 }

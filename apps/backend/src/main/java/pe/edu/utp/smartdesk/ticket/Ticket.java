@@ -26,6 +26,16 @@ public class Ticket {
     private pe.edu.utp.smartdesk.user.User assignedTechnician;
     @Column(name = "ai_classification_source", nullable = false, length = 10)
     private String aiClassificationSource = "NONE";
+    @ManyToOne @JoinColumn(name = "ai_suggested_category_id")
+    private pe.edu.utp.smartdesk.category.Category aiSuggestedCategory;
+    @Enumerated(EnumType.STRING) @Column(name = "ai_suggested_priority", length = 10)
+    private TicketPriority aiSuggestedPriority;
+    @Column(name = "ai_summary", length = 500)
+    private String aiSummary;
+    @Column(name = "ai_suggested_response", length = 2000)
+    private String aiSuggestedResponse;
+    @Column(name = "ai_reason", length = 500)
+    private String aiReason;
     @Column(name = "due_at", nullable = false)
     private Instant dueAt;
     @Column(name = "resolved_at")
@@ -50,6 +60,12 @@ public class Ticket {
     public TicketStatus getStatus() { return status; }
     public pe.edu.utp.smartdesk.user.User getRequester() { return requester; }
     public pe.edu.utp.smartdesk.user.User getAssignedTechnician() { return assignedTechnician; }
+    public pe.edu.utp.smartdesk.category.Category getAiSuggestedCategory() { return aiSuggestedCategory; }
+    public TicketPriority getAiSuggestedPriority() { return aiSuggestedPriority; }
+    public String getAiSummary() { return aiSummary; }
+    public String getAiSuggestedResponse() { return aiSuggestedResponse; }
+    public String getAiReason() { return aiReason; }
+    public String getAiClassificationSource() { return aiClassificationSource; }
     public Instant getDueAt() { return dueAt; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getResolvedAt() { return resolvedAt; }
@@ -59,4 +75,13 @@ public class Ticket {
         this.title=title; this.description=description; this.priority=priority;
     }
     public void assign(pe.edu.utp.smartdesk.user.User technician) { this.assignedTechnician=technician; }
+    public void setAiClassification(pe.edu.utp.smartdesk.category.Category category, TicketPriority priority,
+            String summary, String suggestedResponse, String reason, String source) {
+        this.aiSuggestedCategory = category;
+        this.aiSuggestedPriority = priority;
+        this.aiSummary = summary;
+        this.aiSuggestedResponse = suggestedResponse;
+        this.aiReason = reason;
+        this.aiClassificationSource = source;
+    }
 }
