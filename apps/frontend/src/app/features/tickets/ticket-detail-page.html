@@ -57,7 +57,127 @@
           <dd class="mt-1 font-medium">{{ t.createdAt | date: 'medium' }}</dd>
         </div>
       </dl>
+      @if (canAssignTechnician()) {
+        <div class="mt-6 max-w-xl border-t border-line pt-5">
+          <label for="technician-assignment" class="block text-sm font-medium"
+            >Asignar técnico</label
+          >
+          <p id="technician-assignment-help" class="mt-1 text-xs text-ink-muted">
+            Solo se muestran técnicos activos. El técnico asignado podrá ver y atender esta
+            incidencia.
+          </p>
+          <div class="mt-3 flex flex-col gap-3 sm:flex-row">
+            <p-select
+              inputId="technician-assignment"
+              class="w-full sm:flex-1"
+              [options]="technicians()"
+              optionLabel="fullName"
+              optionValue="id"
+              placeholder="Selecciona un técnico"
+              [ngModel]="selectedTechnicianId()"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="selectTechnician($event)"
+              [loading]="loadingTechnicians()"
+              [disabled]="loadingTechnicians() || technicians().length === 0 || savingAssignment()"
+              aria-describedby="technician-assignment-help"
+            ></p-select>
+            <button
+              type="button"
+              class="min-h-11 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+              [disabled]="
+                selectedTechnicianId() === null ||
+                isCurrentTechnicianSelection() ||
+                savingAssignment()
+              "
+              (click)="assignTechnician()"
+            >
+              {{ savingAssignment() ? 'Asignando…' : 'Asignar' }}
+            </button>
+          </div>
+          @if (assignmentError()) {
+            <p class="mt-2 text-sm text-danger-700" role="alert">{{ assignmentError() }}</p>
+          }
+          @if (assignmentMessage()) {
+            <p class="mt-2 text-sm text-success-700" role="status">{{ assignmentMessage() }}</p>
+          }
+        </div>
+      }
     </article>
+
+    @if (t.aiClassificationSource && t.aiClassificationSource !== 'NONE') {
+      <section
+        class="mt-5 rounded-xl border border-brand-100 bg-brand-50/50 p-5 sm:p-6"
+        aria-labelledby="ai-suggestion-heading"
+      >
+        <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-brand-700">
+              {{ t.aiClassificationSource === 'AI' ? 'Sugerencia de Gemini' : 'Sugerencia local' }}
+            </p>
+            <h2 id="ai-suggestion-heading" class="mt-1 text-lg font-semibold">
+              Apoyo para la atención
+            </h2>
+          </div>
+          <button
+            type="button"
+            class="min-h-10 rounded-lg border border-brand-200 bg-white px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-50"
+            [disabled]="classificationBusy()"
+            (click)="reclassify()"
+          >
+            {{ classificationBusy() ? 'Analizando…' : 'Actualizar sugerencias' }}
+          </button>
+        </div>
+        @if (classificationBusy()) {
+          <p class="mt-3 text-sm text-ink-muted" role="status">
+            Analizando el título y la descripción…
+          </p>
+        }
+        <dl class="mt-4 grid gap-4 sm:grid-cols-2">
+          <div>
+            <dt class="text-xs font-medium text-ink-muted">Categoría sugerida</dt>
+            <dd class="mt-1 text-sm font-medium">
+              {{ t.aiSuggestedCategoryName || 'Sin categoría' }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs font-medium text-ink-muted">Prioridad sugerida</dt>
+            <dd class="mt-1 text-sm font-medium">
+              {{ classificationPriorityLabel(t.aiSuggestedPriority) }}
+            </dd>
+          </div>
+          @if (t.aiSummary) {
+            <div class="sm:col-span-2">
+              <dt class="text-xs font-medium text-ink-muted">Resumen</dt>
+              <dd class="mt-1 whitespace-pre-wrap text-sm leading-6">{{ t.aiSummary }}</dd>
+            </div>
+          }
+          @if (t.aiSuggestedResponse) {
+            <div class="sm:col-span-2">
+              <dt class="text-xs font-medium text-ink-muted">Respuesta sugerida</dt>
+              <dd class="mt-1 whitespace-pre-wrap text-sm leading-6">
+                {{ t.aiSuggestedResponse }}
+              </dd>
+            </div>
+          }
+          @if (t.aiReason) {
+            <div class="sm:col-span-2">
+              <dt class="text-xs font-medium text-ink-muted">Motivo</dt>
+              <dd class="mt-1 text-sm leading-6">{{ t.aiReason }}</dd>
+            </div>
+          }
+        </dl>
+        <p class="mt-4 border-t border-brand-100 pt-3 text-xs text-ink-muted">
+          Estas recomendaciones son orientativas. La categoría y prioridad registradas permanecen
+          bajo control del usuario.
+        </p>
+        @if (classificationMessage()) {
+          <p class="mt-3 text-sm text-success-700" role="status">{{ classificationMessage() }}</p>
+        }
+        @if (classificationError()) {
+          <p class="mt-3 text-sm text-danger-700" role="alert">{{ classificationError() }}</p>
+        }
+      </section>
+    }
 
     <div class="mt-6 grid gap-6 lg:grid-cols-2">
       <section class="rounded-xl border border-line bg-white p-5 shadow-sm sm:p-6">

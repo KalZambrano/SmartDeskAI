@@ -13,6 +13,8 @@ import {
   TicketSummary,
 } from '@/core/models/ticket.model';
 import { TicketService } from '@/core/services/ticket.service';
+import { TechnicianOption } from '@/core/models/technician.model';
+import { TechnicianService } from '@/core/services/technician.service';
 
 @Component({
   selector: 'app-ticket-detail-page',
@@ -24,6 +26,7 @@ export class TicketDetailPage implements OnInit {
   private readonly api = inject(TicketService);
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
+  private readonly technicianApi = inject(TechnicianService);
   protected readonly ticket = signal<TicketSummary | null>(null);
   protected readonly comments = signal<TicketComment[]>([]);
   protected readonly history = signal<TicketHistory[]>([]);
@@ -31,10 +34,20 @@ export class TicketDetailPage implements OnInit {
   protected readonly loading = signal(true);
   protected readonly savingComment = signal(false);
   protected readonly savingStatus = signal(false);
+  protected readonly savingAssignment = signal(false);
+  protected readonly loadingTechnicians = signal(false);
+  protected readonly technicians = signal<TechnicianOption[]>([]);
+  protected readonly selectedTechnicianId = signal<number | null>(null);
+  protected readonly assignmentMessage = signal('');
+  protected readonly assignmentError = signal('');
+  protected readonly classificationBusy = signal(false);
+  protected readonly classificationMessage = signal('');
+  protected readonly classificationError = signal('');
   protected readonly canChangeStatus = computed(() => {
     const role = this.auth.user()?.role;
     return role === 'ADMIN' || role === 'TECHNICIAN';
   });
+  protected readonly canAssignTechnician = computed(() => this.auth.user()?.role === 'ADMIN');
   protected readonly statusOptions = computed(() => {
     const current = this.ticket()?.status;
     if (!current) return [];
@@ -75,12 +88,88 @@ export class TicketDetailPage implements OnInit {
 
   private loadTicket(): void {
     this.api.get(this.id).subscribe({
-      next: (ticket) => this.ticket.set(ticket),
+      next: (ticket) => {
+        this.ticket.set(ticket);
+        this.selectedTechnicianId.set(null);
+        if (this.canAssignTechnician()) this.loadTechnicians();
+      },
       error: () => {
         this.error.set('No se pudo cargar la incidencia. Comprueba que tengas permiso para verla.');
         this.loading.set(false);
       },
       complete: () => this.loading.set(false),
+    });
+  }
+
+  private loadTechnicians(): void {
+    this.loadingTechnicians.set(true);
+    this.technicianApi.listActive().subscribe({
+      next: (technicians) => this.technicians.set(technicians),
+      error: () => {
+        this.assignmentError.set('No se pudo cargar la lista de técnicos activos.');
+        this.loadingTechnicians.set(false);
+      },
+      complete: () => this.loadingTechnicians.set(false),
+    });
+  }
+
+  protected selectTechnician(id: number | null): void {
+    this.selectedTechnicianId.set(id);
+    this.assignmentError.set('');
+    this.assignmentMessage.set('');
+  }
+
+  protected isCurrentTechnicianSelection(): boolean {
+    const selectedId = this.selectedTechnicianId();
+    const currentName = this.ticket()?.assignedTechnicianName;
+    return (
+      selectedId !== null &&
+      this.technicians().some(
+        (technician) => technician.id === selectedId && technician.fullName === currentName,
+      )
+    );
+  }
+
+  protected assignTechnician(): void {
+    const id = this.selectedTechnicianId();
+    if (id === null || this.isCurrentTechnicianSelection() || this.savingAssignment()) return;
+    this.savingAssignment.set(true);
+    this.assignmentError.set('');
+    this.assignmentMessage.set('');
+    this.api.assign(this.id, id).subscribe({
+      next: (ticket) => {
+        this.ticket.set(ticket);
+        this.assignmentMessage.set('Técnico asignado correctamente.');
+        this.refreshDiscussion();
+      },
+      error: () => {
+        this.assignmentError.set('No se pudo asignar el técnico. Verifica que siga activo.');
+        this.savingAssignment.set(false);
+      },
+      complete: () => this.savingAssignment.set(false),
+    });
+  }
+
+  protected reclassify(): void {
+    if (this.classificationBusy()) return;
+    this.classificationBusy.set(true);
+    this.classificationMessage.set('');
+    this.classificationError.set('');
+    this.api.reclassify(this.id).subscribe({
+      next: (ticket) => {
+        this.ticket.set(ticket);
+        this.classificationMessage.set(
+          ticket.aiClassificationSource === 'AI'
+            ? 'Sugerencias actualizadas con Gemini.'
+            : 'Gemini no está disponible; se actualizaron las sugerencias con reglas locales.',
+        );
+        this.refreshDiscussion();
+      },
+      error: () => {
+        this.classificationError.set('No se pudieron actualizar las sugerencias.');
+        this.classificationBusy.set(false);
+      },
+      complete: () => this.classificationBusy.set(false),
     });
   }
 
@@ -143,5 +232,9 @@ export class TicketDetailPage implements OnInit {
 
   protected priorityLabel(priority: TicketSummary['priority']): string {
     return { LOW: 'Baja', MEDIUM: 'Media', HIGH: 'Alta', CRITICAL: 'Crítica' }[priority];
+  }
+
+  protected classificationPriorityLabel(priority: TicketSummary['aiSuggestedPriority']): string {
+    return priority ? this.priorityLabel(priority) : 'Sin sugerencia';
   }
 }

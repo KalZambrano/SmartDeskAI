@@ -10,6 +10,11 @@
     [formGroup]="form"
     (ngSubmit)="submit()"
   >
+    <p class="rounded-lg bg-canvas px-4 py-3 text-sm leading-6 text-ink-muted">
+      Al registrar, SmartDesk sugerirá una categoría, prioridad, resumen y respuesta. Las
+      sugerencias no cambian las opciones que selecciones. El título y la descripción pueden
+      procesarse mediante un servicio externo de IA; evita incluir datos personales sensibles.
+    </p>
     <label for="ticket-title" class="block text-sm font-medium text-ink">
       Título
       <input
@@ -68,6 +73,11 @@
     @if (error()) {
       <p role="alert" class="rounded-lg bg-danger-50 px-4 py-3 text-sm text-danger-700">
         {{ error() }}
+      </p>
+    }
+    @if (saving()) {
+      <p class="text-sm text-ink-muted" role="status">
+        Registrando la incidencia y preparando sugerencias…
       </p>
     }
 
