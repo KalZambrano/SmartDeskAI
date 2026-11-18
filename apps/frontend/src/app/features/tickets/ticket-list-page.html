@@ -16,6 +16,86 @@
     }
   </header>
 
+  <search
+    aria-label="Filtros de incidencias"
+    class="mt-6 block rounded-xl border border-line bg-white p-4 shadow-sm"
+  >
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div>
+        <label for="ticket-search" class="block text-xs font-medium text-ink-muted">Buscar</label>
+        <input
+          #searchInput
+          pInputText
+          id="ticket-search"
+          name="q"
+          type="search"
+          [value]="search()"
+          (change)="setSearch(searchInput.value)"
+          placeholder="Código o título"
+          class="mt-1 w-full !bg-white !text-ink"
+        />
+      </div>
+      <div>
+        <label for="ticket-status" class="block text-xs font-medium text-ink-muted">Estado</label>
+        <p-select
+          id="ticket-status"
+          inputId="ticket-status"
+          name="status"
+          class="mt-1 w-full"
+          [options]="statusOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="status()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="setStatus($event)"
+        ></p-select>
+      </div>
+      <div>
+        <label for="ticket-priority" class="block text-xs font-medium text-ink-muted"
+          >Prioridad</label
+        >
+        <p-select
+          inputId="ticket-priority"
+          name="priority"
+          class="mt-1 w-full"
+          [options]="priorityOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="priority()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="setPriority($event)"
+        ></p-select>
+      </div>
+      <div>
+        <label for="ticket-category" class="block text-xs font-medium text-ink-muted"
+          >Categoría</label
+        >
+        <p-select
+          inputId="ticket-category"
+          name="categoryId"
+          class="mt-1 w-full"
+          [options]="categoryOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="categoryId()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="setCategory($event)"
+        ></p-select>
+      </div>
+    </div>
+    @if (hasFilters()) {
+      <div class="mt-4">
+        <button
+          type="button"
+          (click)="clearFilters()"
+          class="rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-ink-muted hover:bg-canvas"
+        >
+          Limpiar filtros
+        </button>
+      </div>
+    }
+  </search>
+
   @if (error()) {
     <div
       class="mt-6 rounded-xl border border-red-200 bg-danger-50 p-4 text-sm text-danger-700"
@@ -32,22 +112,42 @@
     </div>
   } @else if (tickets().length === 0) {
     <div class="mt-6 rounded-xl border border-line bg-white px-6 py-14 text-center shadow-sm">
-      <h2 class="text-base font-semibold">Aún no hay incidencias</h2>
-      <p class="mt-2 text-sm text-ink-muted">
-        Cuando se registre o asigne una solicitud, aparecerá aquí.
-      </p>
-      @if (canCreate()) {
-        <a
-          routerLink="/incidencias/nueva"
-          class="mt-5 inline-flex rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
-          >Registrar incidencia</a
+      @if (hasFilters()) {
+        <h2 class="text-base font-semibold">No hay incidencias con estos filtros</h2>
+        <p class="mt-2 text-sm text-ink-muted">Prueba con otros criterios o limpia los filtros.</p>
+        <button
+          type="button"
+          (click)="clearFilters()"
+          class="mt-5 inline-flex rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-ink hover:bg-canvas"
         >
+          Limpiar filtros
+        </button>
+      } @else {
+        <h2 class="text-base font-semibold">Aún no hay incidencias</h2>
+        <p class="mt-2 text-sm text-ink-muted">
+          Cuando se registre o asigne una solicitud, aparecerá aquí.
+        </p>
+        @if (canCreate()) {
+          <a
+            routerLink="/incidencias/nueva"
+            class="mt-5 inline-flex rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+            >Registrar incidencia</a
+          >
+        }
       }
     </div>
   } @else {
     <div class="mt-6 overflow-hidden rounded-xl border border-line bg-white shadow-sm">
-      <div class="overflow-x-auto">
+      <div
+        class="overflow-x-auto focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600"
+        tabindex="0"
+        role="region"
+        aria-label="Tabla de incidencias; desplázate horizontalmente para ver todas las columnas"
+      >
         <table class="w-full min-w-[760px] text-left text-sm">
+          <caption class="sr-only">
+            Incidencias registradas y su estado de atención
+          </caption>
           <thead
             class="border-b border-line bg-canvas text-xs font-semibold uppercase tracking-wide text-ink-muted"
           >
@@ -74,15 +174,14 @@
                 <td class="px-5 py-4 text-ink-muted">
                   {{ ticket.categoryName || 'Sin categoría' }}
                 </td>
-                <td class="px-5 py-4">{{ priorityLabel(ticket.priority) }}</td>
                 <td class="px-5 py-4">
-                  <span
-                    class="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700"
-                    >{{ statusLabel(ticket.status) }}</span
-                  >
+                  <app-priority-indicator [priority]="ticket.priority" />
                 </td>
-                <td class="px-5 py-4 text-ink-muted">
-                  {{ ticket.assignedTechnicianName || 'Sin asignar' }}
+                <td class="px-5 py-4">
+                  <app-status-indicator [status]="ticket.status" />
+                </td>
+                <td class="px-5 py-4">
+                  <app-assignee-cell [assignee]="ticket.assignedTechnicianName" />
                 </td>
                 <td class="whitespace-nowrap px-5 py-4 text-xs text-ink-muted">
                   {{ ticket.createdAt | date: 'short' }}

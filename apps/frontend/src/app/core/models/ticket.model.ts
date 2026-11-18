@@ -13,6 +13,12 @@ export interface TicketSummary {
   assignedTechnicianName: string | null;
   createdAt: string;
   dueAt: string;
+  aiSuggestedCategoryName?: string | null;
+  aiSuggestedPriority?: TicketPriority | null;
+  aiSummary?: string | null;
+  aiSuggestedResponse?: string | null;
+  aiReason?: string | null;
+  aiClassificationSource?: 'AI' | 'RULES' | 'NONE' | null;
 }
 
 export interface TicketComment {
@@ -27,6 +33,13 @@ export interface TicketHistory {
   eventType: string;
   description: string;
   createdAt: string;
+}
+
+export interface TicketFilters {
+  q?: string;
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  categoryId?: number;
 }
 
 export interface CreateTicketRequest {
