@@ -37,6 +37,17 @@
       <ul class="space-y-1">
         <li>
           <a
+            routerLink="/dashboard"
+            routerLinkActive="bg-brand-50 text-brand-700"
+            class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-ink-muted hover:bg-canvas"
+            (click)="closeMenu()"
+          >
+            <svg lucideActivity [size]="18" aria-hidden="true"></svg>
+            Dashboard
+          </a>
+        </li>
+        <li>
+          <a
             routerLink="/incidencias"
             routerLinkActive="bg-brand-50 text-brand-700"
             class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-ink-muted hover:bg-canvas"
@@ -59,6 +70,25 @@
             </a>
           </li>
         }
+        <li>
+          <a
+            routerLink="/notificaciones"
+            routerLinkActive="bg-brand-50 text-brand-700"
+            class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-ink-muted hover:bg-canvas"
+            (click)="closeMenu()"
+          >
+            <svg lucideBell [size]="18" aria-hidden="true"></svg>
+            Notificaciones
+            @if (unread() > 0) {
+              <span
+                class="ml-auto rounded-full bg-brand-600 px-2 py-0.5 text-xs font-semibold text-white"
+                [attr.aria-label]="unread() + ' notificaciones no leídas'"
+              >
+                {{ unread() }}
+              </span>
+            }
+          </a>
+        </li>
         <li>
           <a
             routerLink="/estado"
@@ -86,6 +116,17 @@
               >
                 <span class="ml-1 h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true"></span>
                 Categorías
+              </a>
+            </li>
+            <li>
+              <a
+                routerLink="/maestros/tecnicos"
+                routerLinkActive="bg-brand-50 text-brand-700"
+                class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-ink-muted hover:bg-canvas"
+                (click)="closeMenu()"
+              >
+                <svg lucideUsers [size]="18" aria-hidden="true"></svg>
+                Técnicos
               </a>
             </li>
           </ul>

@@ -13,7 +13,13 @@ export const routes: Routes = [
     component: AppShell,
     canActivate: [authGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'incidencias' },
+      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      {
+        path: 'dashboard',
+        title: 'Dashboard · SmartDesk AI',
+        loadComponent: () =>
+          import('@/features/dashboard/dashboard-page').then((m) => m.DashboardPage),
+      },
       {
         path: 'incidencias',
         loadComponent: () =>
@@ -32,6 +38,12 @@ export const routes: Routes = [
           import('@/features/tickets/ticket-detail-page').then((m) => m.TicketDetailPage),
       },
       {
+        path: 'notificaciones',
+        title: 'Notificaciones · SmartDesk AI',
+        loadComponent: () =>
+          import('@/features/notifications/notifications-page').then((m) => m.NotificationsPage),
+      },
+      {
         path: 'estado',
         loadComponent: () => import('@/features/status/status-page').then((m) => m.StatusPage),
       },
@@ -41,6 +53,13 @@ export const routes: Routes = [
         data: { roles: ['ADMIN'] },
         loadComponent: () =>
           import('@/features/categories/categories-page').then((m) => m.CategoriesPage),
+      },
+      {
+        path: 'maestros/tecnicos',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () =>
+          import('@/features/technicians/technicians-page').then((m) => m.TechniciansPage),
       },
     ],
   },

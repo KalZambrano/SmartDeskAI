@@ -1,0 +1,83 @@
+<section class="mx-auto max-w-4xl space-y-6" aria-labelledby="notifications-title">
+  <header>
+    <h1 id="notifications-title" class="text-2xl font-semibold text-ink">Notificaciones</h1>
+    <p class="mt-1 text-sm text-ink-muted">
+      Avisos de incidencias, asignaciones, cambios de estado y escalamientos.
+    </p>
+  </header>
+
+  @if (loadState() === 'loading') {
+    <p class="rounded-lg border border-line bg-surface p-6 text-sm text-ink-muted" role="status">
+      Cargando notificaciones…
+    </p>
+  } @else if (loadState() === 'error') {
+    <div class="rounded-lg border border-line bg-surface p-6" role="alert">
+      <p class="text-sm text-danger-700">No se pudieron cargar las notificaciones.</p>
+      <button
+        type="button"
+        class="mt-3 rounded-md border border-line px-3 py-1.5 text-sm font-medium text-ink hover:bg-canvas"
+        (click)="load()"
+      >
+        Reintentar
+      </button>
+    </div>
+  } @else if (items().length === 0) {
+    <p class="rounded-lg border border-line bg-surface p-6 text-sm text-ink-muted">
+      No tienes notificaciones por ahora.
+    </p>
+  } @else {
+    <ul class="space-y-3">
+      @for (notification of items(); track notification.id) {
+        <li
+          class="rounded-lg border border-gray-500/30 p-4"
+          [class.bg-brand-50]="!notification.readAt"
+          [class.bg-surface]="!!notification.readAt"
+          [attr.aria-label]="notification.title"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0 space-y-1">
+              <p class="flex items-start gap-2 text-sm font-semibold text-ink">
+                @if (!notification.readAt) {
+                  <span
+                    class="mt-1.5 size-2 shrink-0 rounded-full bg-brand-600"
+                    aria-hidden="true"
+                  ></span>
+                  <span class="sr-only">No leída: </span>
+                }
+                {{ notification.title }}
+              </p>
+              <p class="text-sm text-ink-muted">{{ notification.message }}</p>
+              <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-subtle">
+                {{ notification.createdAt | date: 'dd/MM/yyyy HH:mm' }}
+              </p>
+            </div>
+            <div class="flex shrink-0 items-center gap-2">
+              @if (!notification.readAt) {
+                <button
+                  type="button"
+                  class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-line bg-surface text-brand-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Marcar como leido"
+                  aria-label="Marcar como leido"
+                  [disabled]="busyId() !== null"
+                  (click)="markRead(notification)"
+                >
+                  <svg lucideCheck [size]="17" aria-hidden="true"></svg>
+                </button>
+              }
+              @if (notification.ticketId !== null) {
+                <a
+                  class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-line bg-surface text-brand-700 hover:bg-gray-50"
+                  [routerLink]="['/incidencias', notification.ticketId]"
+                  title="Ver Incidencia"
+                  aria-label="Ver Incidencia"
+                >
+                  <svg lucideChevronRight [size]="17" aria-hidden="true"></svg>
+                </a>
+              }
+            </div>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>
