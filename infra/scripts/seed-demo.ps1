@@ -1,8 +1,9 @@
 <#
     Datos de demostracion para SmartDesk AI.
 
-    Crea el primer administrador (si la base aun no tiene usuarios) y los usuarios
-    solicitante y tecnico. Es idempotente: se puede ejecutar varias veces sin fallar.
+    Crea el primer administrador (si la base aun no tiene usuarios), los usuarios
+    solicitante y tecnico, una incidencia de red y la marca como vencida si el
+    modo demostracion esta activo (DEMO_MODE_ENABLED=true). Es idempotente.
 
     Uso (PowerShell):
         pwsh infra/scripts/seed-demo.ps1
@@ -26,7 +27,7 @@ function Invoke-Api {
     }
     if ($null -ne $Body) {
         $params.ContentType = "application/json"
-        $params.Body = ($Body | ConvertTo-Json -Compress)
+        $params.Body = ($Body | ConvertTo-Json -Compress -Depth 5)
     }
     if ($script:Token) { $params.Headers["Authorization"] = "Bearer $script:Token" }
 
@@ -77,6 +78,45 @@ foreach ($demoUser in $demoUsers) {
     } else {
         Write-Host "$($demoUser.role) ya existe: $($demoUser.email)"
     }
+}
+
+# 4. Especialidad de red del tecnico (requerida para la asignacion automatica).
+$categories = Invoke-Api -Method Get -Path "/categories"
+$network = $categories | Where-Object { $_.code -eq 'NETWORK' } | Select-Object -First 1
+$users = Invoke-Api -Method Get -Path "/users"
+$technician = $users | Where-Object { $_.email -eq 'tecnico@smartdesk.local' } | Select-Object -First 1
+if ($network -and $technician) {
+    Invoke-Api -Method Put -Path "/users/$($technician.id)/specialties" -Body @{
+        categoryIds = @($network.id)
+    } | Out-Null
+    Write-Host "Especialidad de red asignada al tecnico"
+}
+
+# 5. Incidencia de demostracion.
+$requesterSession = Invoke-Api -Method Post -Path "/auth/login" -Body @{
+    email = "solicitante@smartdesk.local"
+    password = $DemoPassword
+}
+$script:Token = $requesterSession.token
+$existing = Invoke-Api -Method Get -Path "/tickets?q=Demo"
+$ticket = $existing | Where-Object { $_.title -like 'Demo: wifi intermitente*' } | Select-Object -First 1
+if (-not $ticket) {
+    $ticket = Invoke-Api -Method Post -Path "/tickets" -Body @{
+        title = "Demo: wifi intermitente en piso 2"
+        description = "La conexion wifi se corta cada pocos minutos en el piso 2. Afecta a varias laptops."
+        priority = "HIGH"
+        categoryId = $network.id
+    }
+    Write-Host "Incidencia demo creada: $($ticket.ticketCode)"
+}
+
+# 6. Marcar como vencida requiere DEMO_MODE_ENABLED=true en el backend.
+$script:Token = $session.token
+try {
+    $overdue = Invoke-Api -Method Post -Path "/demo/tickets/$($ticket.id)/overdue" -Body @{}
+    if ($overdue) { Write-Host "Incidencia demo vencida: $($overdue.ticketCode)" }
+} catch {
+    Write-Host "Modo demostracion desactivado:define DEMO_MODE_ENABLED=true para simular vencimientos."
 }
 
 Write-Host ""
