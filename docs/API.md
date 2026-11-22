@@ -18,6 +18,7 @@ El token JWT se envía como `Authorization: Bearer <token>`.
 |---|---|---|
 | GET | `/users` | Admin |
 | POST | `/users` | Admin |
+| PUT | `/users/{id}` | Admin |
 | GET | `/users/{id}/specialties` | Admin |
 | PUT | `/users/{id}/specialties` | Admin |
 | PATCH | `/users/{id}/active` | Admin |
@@ -25,7 +26,7 @@ El token JWT se envía como `Authorization: Bearer <token>`.
 | GET | `/categories/manage` | Admin (todas) |
 | POST / PUT / DELETE | `/categories` | Admin |
 
-`PUT /users/{id}/specialties` recibe `{ "categoryIds": [1, 2] }`; una lista vacía elimina las especialidades.
+`POST /users` recibe `{ "fullName", "email", "password", "role" }`, donde `role` es `ADMIN`, `TECHNICIAN` o `REQUESTER` y la clave tiene al menos 12 caracteres. `PUT /users/{id}` recibe `{ "fullName", "email", "role" }`: no cambia la clave y rechaza un correo ya usado por otro usuario con `409`. `PUT /users/{id}/specialties` recibe `{ "categoryIds": [1, 2] }`; una lista vacía elimina las especialidades.
 
 ## Incidencias
 
@@ -73,6 +74,8 @@ Los filtros se combinan con el alcance por rol: el solicitante ve solo las suyas
 | GET | `/dashboard/reports/export` | Admin | CSV UTF-8 con `;`, cabecera `Content-Disposition`. |
 
 Los tres aceptan los filtros opcionales `from`, `to` (ISO-8601), `status`, `priority` y `categoryId`; se combinan con el alcance por rol. `from`/`to` inválidos devuelven `400`. El CSV escapa celdas que empiezan con `=`, `+`, `-` o `@` para evitar inyección de fórmulas.
+
+`/dashboard/summary` incluye `timeline`: 14 puntos `{ "date": "AAAA-MM-DD", "created": n, "resolved": n }` en UTC, calculados sobre las incidencias filtradas (las fechas de creación y resolución se cuentan de forma independiente). El dashboard ofrece gráficos de prioridad, categoría, carga por técnico y serie diaria, con un conmutador a tablas para lectura accesible.
 
 ## Modo demostración
 
