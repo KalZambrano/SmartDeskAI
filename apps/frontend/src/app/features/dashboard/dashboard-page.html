@@ -1,0 +1,261 @@
+<section class="space-y-6" aria-labelledby="dashboard-title">
+  <header class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-widest text-brand-700">Reportes</p>
+      <h1 id="dashboard-title" class="mt-1 text-2xl font-semibold text-ink">Dashboard</h1>
+      <p class="mt-1 text-sm text-ink-muted">
+        Indicadores calculados a partir de las incidencias persistidas según tu rol.
+      </p>
+    </div>
+    @if (isAdmin()) {
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-900 disabled:opacity-50"
+        [disabled]="exporting()"
+        (click)="exportCsv()"
+      >
+        <svg lucideDownload [size]="16" aria-hidden="true"></svg>
+        Exportar CSV
+      </button>
+    }
+  </header>
+
+  <form
+    class="rounded-xl border border-line bg-surface p-5 shadow-sm"
+    aria-label="Filtros del dashboard"
+    (ngSubmit)="load()"
+  >
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div>
+        <label for="dashboard-from" class="mb-1.5 block text-xs font-medium text-ink-muted">
+          Desde
+        </label>
+        <p-datepicker
+          inputId="dashboard-from"
+          class="block w-full"
+          inputStyleClass="w-full"
+          dateFormat="yy-mm-dd"
+          dataType="string"
+          placeholder="AAAA-MM-DD"
+          showIcon
+          iconDisplay="input"
+          showClear
+          readonlyInput
+          [ngModel]="from()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="from.set($event ?? '')"
+        ></p-datepicker>
+      </div>
+
+      <div>
+        <label for="dashboard-to" class="mb-1.5 block text-xs font-medium text-ink-muted">
+          Hasta
+        </label>
+        <p-datepicker
+          inputId="dashboard-to"
+          class="block w-full"
+          inputStyleClass="w-full"
+          dateFormat="yy-mm-dd"
+          dataType="string"
+          placeholder="AAAA-MM-DD"
+          showIcon
+          iconDisplay="input"
+          showClear
+          readonlyInput
+          [ngModel]="to()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="to.set($event ?? '')"
+        ></p-datepicker>
+      </div>
+
+      <div>
+        <label for="dashboard-status" class="mb-1.5 block text-xs font-medium text-ink-muted">
+          Estado
+        </label>
+        <p-select
+          inputId="dashboard-status"
+          class="block w-full"
+          [options]="statusOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="status()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="status.set($event)"
+        ></p-select>
+      </div>
+
+      <div>
+        <label for="dashboard-priority" class="mb-1.5 block text-xs font-medium text-ink-muted">
+          Prioridad
+        </label>
+        <p-select
+          inputId="dashboard-priority"
+          class="block w-full"
+          [options]="priorityOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="priority()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="priority.set($event)"
+        ></p-select>
+      </div>
+
+      <div>
+        <label for="dashboard-category" class="mb-1.5 block text-xs font-medium text-ink-muted">
+          Categoría
+        </label>
+        <p-select
+          inputId="dashboard-category"
+          class="block w-full"
+          [options]="categoryOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="categoryId()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="categoryId.set($event)"
+        ></p-select>
+      </div>
+    </div>
+
+    <div class="mt-5 flex flex-wrap items-center gap-2 border-t border-line pt-4">
+      <button
+        type="submit"
+        class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
+      >
+        Aplicar filtros
+      </button>
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink-muted hover:bg-canvas hover:text-ink"
+        (click)="clearFilters()"
+      >
+        <svg lucideRotateCcw [size]="15" aria-hidden="true"></svg>
+        Limpiar
+      </button>
+    </div>
+  </form>
+
+  @if (loadState() === 'loading') {
+    <div
+      class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+      role="status"
+      aria-label="Calculando indicadores"
+    >
+      @for (item of [1, 2, 3, 4]; track item) {
+        <div class="h-24 animate-pulse rounded-lg border border-line bg-surface"></div>
+      }
+    </div>
+    <p class="sr-only">Calculando indicadores…</p>
+  } @else if (loadState() === 'error') {
+    <div class="rounded-lg border border-danger-700/20 bg-danger-50 p-6" role="alert">
+      <p class="text-sm font-medium text-danger-700">No se pudieron cargar los indicadores.</p>
+      <button
+        type="button"
+        class="mt-3 text-sm font-medium text-brand-700 hover:underline"
+        (click)="load()"
+      >
+        Reintentar
+      </button>
+    </div>
+  } @else if (summary(); as data) {
+    <article
+      class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 p-5 shadow-sm"
+      aria-labelledby="unassigned-title"
+    >
+      <div class="flex min-w-0 items-center gap-3">
+        <span
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700"
+        >
+          <svg lucideUserRoundX [size]="20" aria-hidden="true"></svg>
+        </span>
+        <div class="flex min-w-0 items-center gap-4">
+          <span class="shrink-0 text-3xl font-semibold tabular-nums text-amber-700">
+            {{ unassigned() }}
+          </span>
+          <div class="min-w-0">
+            <h2 id="unassigned-title" class="text-sm font-semibold text-ink">
+              Incidencias sin técnico asignado
+            </h2>
+            <p class="mt-0.5 text-xs text-ink-muted">
+              Requieren asignación para continuar su atención.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <a
+          routerLink="/incidencias"
+          class="inline-flex items-center gap-1.5 rounded-lg border border-brand-700 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
+        >
+          Ver Incidencias
+          <svg lucideArrowRight [size]="16" aria-hidden="true"></svg>
+        </a>
+      </div>
+    </article>
+
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      @for (
+        kpi of [
+          { label: 'Total', value: data.total },
+          { label: 'Abiertas', value: data.open },
+          { label: 'En atención', value: data.inProgress },
+          { label: 'Pendientes', value: data.pending },
+          { label: 'Resueltas', value: data.resolved },
+          { label: 'Cerradas', value: data.closed },
+          { label: 'Vencidas', value: data.overdue },
+          { label: 'Resolución prom. (h)', value: data.averageResolutionHours },
+        ];
+        track kpi.label
+      ) {
+        <article class="rounded-lg border border-line bg-surface p-4 shadow-sm">
+          <p class="text-xs font-medium uppercase tracking-wide text-ink-muted">{{ kpi.label }}</p>
+          <p class="mt-2 text-2xl font-semibold text-ink">{{ kpi.value }}</p>
+        </article>
+      }
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-2">
+      <article class="rounded-lg border border-line bg-surface p-5 shadow-sm">
+        <h2 class="text-sm font-semibold text-ink">Distribución por prioridad</h2>
+        <ul class="mt-4 space-y-3">
+          @for (entry of entries(data.byPriority); track entry[0]) {
+            <li>
+              <div class="flex justify-between text-xs text-ink-muted">
+                <span>{{ entry[0] }}</span><span>{{ entry[1] }}</span>
+              </div>
+              <div class="mt-1 h-2 rounded-full bg-canvas">
+                <div
+                  class="h-2 rounded-full bg-brand-600"
+                  [style.width.%]="data.total ? (entry[1] / data.total) * 100 : 0"
+                ></div>
+              </div>
+            </li>
+          } @empty {
+            <li class="text-sm text-ink-muted">Sin datos en el periodo.</li>
+          }
+        </ul>
+      </article>
+
+      <article class="rounded-lg border border-line bg-surface p-5 shadow-sm">
+        <h2 class="text-sm font-semibold text-ink">Distribución por categoría</h2>
+        <ul class="mt-4 space-y-3">
+          @for (entry of entries(data.byCategory); track entry[0]) {
+            <li>
+              <div class="flex justify-between text-xs text-ink-muted">
+                <span>{{ entry[0] }}</span><span>{{ entry[1] }}</span>
+              </div>
+              <div class="mt-1 h-2 rounded-full bg-canvas">
+                <div
+                  class="h-2 rounded-full bg-brand-600"
+                  [style.width.%]="data.total ? (entry[1] / data.total) * 100 : 0"
+                ></div>
+              </div>
+            </li>
+          } @empty {
+            <li class="text-sm text-ink-muted">Sin datos en el periodo.</li>
+          }
+        </ul>
+      </article>
+    </div>
+  }
+</section>
