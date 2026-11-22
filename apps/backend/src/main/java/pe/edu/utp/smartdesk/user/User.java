@@ -88,6 +88,18 @@ public class User {
         return updatedAt;
     }
 
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
     public void setActive(boolean active) {
         this.active = active;
     }
