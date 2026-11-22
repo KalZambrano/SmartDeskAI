@@ -1,0 +1,434 @@
+<section class="mx-auto max-w-6xl">
+  <p class="text-sm font-medium text-brand-700">Maestros</p>
+  <header class="mt-1 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Técnicos</h1>
+      <p class="mt-1 text-sm text-ink-muted">
+        Crea técnicos y define sus categorías de especialidad para la asignación automática.
+      </p>
+    </div>
+    <button
+      type="button"
+      class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+      (click)="create()"
+    >
+      <svg lucidePlus [size]="18" aria-hidden="true"></svg>
+      Nuevo técnico
+    </button>
+  </header>
+
+  @if (error() && !modalOpen()) {
+    <p role="alert" class="mt-5 rounded-lg bg-danger-50 px-4 py-3 text-sm text-danger-700">
+      {{ error() }}
+    </p>
+  }
+  @if (notice()) {
+    <p role="status" class="mt-5 rounded-lg bg-success-50 px-4 py-3 text-sm text-success-700">
+      {{ notice() }}
+    </p>
+  }
+
+  @if (credential(); as created) {
+    <section
+      class="mt-5 rounded-xl border border-brand-100 bg-brand-50 p-5"
+      aria-labelledby="credential-title"
+    >
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 id="credential-title" class="font-semibold text-brand-900">Contraseña temporal</h2>
+          <p class="mt-1 text-sm text-brand-900">
+            Comparte estas credenciales directamente con {{ created.fullName }}. La contraseña solo
+            se muestra ahora.
+          </p>
+          <p class="mt-3 text-sm text-ink">
+            <span class="font-medium">Correo:</span> {{ created.email }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="self-start rounded-md p-2 text-ink-muted hover:bg-white hover:text-ink"
+          aria-label="Ocultar contraseña temporal"
+          title="Ocultar contraseña"
+          (click)="hideCredential()"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <label class="sr-only" for="created-password"
+          >Contraseña temporal de {{ created.fullName }}</label
+        >
+        <input
+          id="created-password"
+          pInputText
+          class="w-full !bg-white !font-mono !text-ink sm:max-w-md"
+          type="text"
+          [value]="created.password"
+          readonly
+          autocomplete="off"
+        />
+        <button
+          type="button"
+          class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink hover:bg-canvas"
+          (click)="copyPassword(created.password)"
+        >
+          @if (copyStatus().startsWith('Contraseña copiada')) {
+            <svg lucideCheck [size]="17" aria-hidden="true"></svg>
+            Copiada
+          } @else {
+            <svg lucideCopy [size]="17" aria-hidden="true"></svg>
+            Copiar contraseña
+          }
+        </button>
+      </div>
+      <p class="mt-2 min-h-5 text-sm text-ink-muted" role="status" aria-live="polite">
+        {{ copyStatus() }}
+      </p>
+    </section>
+  }
+
+  <section
+    class="mt-6 overflow-hidden rounded-xl border border-line bg-white shadow-sm"
+    aria-labelledby="technicians-list-title"
+  >
+    <div class="border-b border-line px-5 py-4 sm:px-6">
+      <h2 id="technicians-list-title" class="text-base font-semibold">Técnicos registrados</h2>
+      <p class="mt-1 text-xs text-ink-muted">Cuentas disponibles para atender incidencias.</p>
+    </div>
+    @if (loading()) {
+      <p class="p-6 text-sm text-ink-muted" role="status">Cargando técnicos…</p>
+    } @else if (technicians().length === 0) {
+      <div class="px-6 py-12 text-center">
+        <p class="text-sm text-ink-muted">Aún no hay técnicos registrados.</p>
+        <button
+          type="button"
+          class="mt-3 text-sm font-semibold text-brand-700 hover:underline"
+          (click)="create()"
+        >
+          Crear el primer técnico
+        </button>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[760px] text-left text-sm">
+          <caption class="sr-only">
+            Técnicos registrados en SmartDesk
+          </caption>
+          <thead
+            class="border-b border-line bg-canvas text-xs font-semibold uppercase tracking-wide text-ink-muted"
+          >
+            <tr>
+              <th scope="col" class="px-5 py-3.5">Técnico</th>
+              <th scope="col" class="px-5 py-3.5">Correo</th>
+              <th scope="col" class="px-5 py-3.5">Estado</th>
+              <th scope="col" class="px-5 py-3.5 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            @for (technician of technicians(); track technician.id) {
+              <tr class="hover:bg-slate-50/70">
+                <td class="px-5 py-4 font-medium text-ink">{{ technician.fullName }}</td>
+                <td class="px-5 py-4 text-ink-muted">{{ technician.email }}</td>
+                <td class="px-5 py-4">
+                  <span
+                    class="rounded-full px-2.5 py-1 text-xs font-medium"
+                    [class.bg-success-50]="technician.active"
+                    [class.text-success-700]="technician.active"
+                    [class.bg-canvas]="!technician.active"
+                    [class.text-ink-muted]="!technician.active"
+                    >{{ technician.active ? 'Activo' : 'Inactivo' }}</span
+                  >
+                </td>
+                <td class="px-5 py-4">
+                  <div class="flex justify-end gap-1">
+                    <button
+                      type="button"
+                      class="rounded-md p-2 text-ink-muted transition hover:bg-brand-50 hover:text-brand-700"
+                      [attr.aria-label]="'Ver detalles de ' + technician.fullName"
+                      title="Ver detalles"
+                      (click)="openDetails(technician)"
+                    >
+                      <svg lucideEye [size]="17" aria-hidden="true"></svg>
+                    </button>
+                    @if (technician.active) {
+                      <button
+                        type="button"
+                        class="rounded-md p-2 text-ink-muted transition hover:bg-danger-50 hover:text-danger-700"
+                        [attr.aria-label]="'Desactivar técnico ' + technician.fullName"
+                        title="Desactivar"
+                        (click)="setActive(technician, false)"
+                      >
+                        <svg lucidePower [size]="17" aria-hidden="true"></svg>
+                      </button>
+                    } @else {
+                      <button
+                        type="button"
+                        class="rounded-md p-2 text-ink-muted transition hover:bg-success-50 hover:text-success-700"
+                        [attr.aria-label]="'Activar técnico ' + technician.fullName"
+                        title="Activar"
+                        (click)="setActive(technician, true)"
+                      >
+                        <svg lucideRotateCcw [size]="17" aria-hidden="true"></svg>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</section>
+
+@if (modalOpen()) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+    role="presentation"
+    (click)="dismissOnBackdrop($event)"
+    (keydown.escape)="closeModal()"
+  >
+    <section
+      class="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl border border-line bg-white shadow-2xl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="technician-dialog-title"
+    >
+      <header class="flex items-center justify-between border-b border-line px-5 py-4 sm:px-6">
+        <h2 id="technician-dialog-title" class="text-lg font-semibold">Nuevo técnico</h2>
+        <button
+          type="button"
+          class="rounded-md p-2 text-ink-muted hover:bg-canvas"
+          aria-label="Cerrar ventana"
+          [disabled]="saving()"
+          (click)="closeModal()"
+        >
+          <svg lucideX [size]="18" aria-hidden="true"></svg>
+        </button>
+      </header>
+      <form class="space-y-4" [formGroup]="form" (ngSubmit)="save()">
+        <div class="space-y-4 px-5 py-5 sm:px-6">
+          <label for="technician-name" class="block text-sm font-medium text-ink">
+            Nombre completo <span class="font-normal text-ink-muted">(obligatorio)</span>
+            <input
+              id="technician-name"
+              pInputText
+              class="mt-2 w-full !bg-white !text-ink"
+              formControlName="fullName"
+              autocomplete="name"
+              maxlength="120"
+            />
+            @if (form.controls.fullName.touched && form.controls.fullName.invalid) {
+              <span class="mt-1 block text-xs font-normal text-danger-700"
+                >Ingresa el nombre (máximo 120 caracteres).</span
+              >
+            }
+          </label>
+          <label for="technician-email" class="block text-sm font-medium text-ink">
+            Correo electrónico <span class="font-normal text-ink-muted">(obligatorio)</span>
+            <input
+              id="technician-email"
+              pInputText
+              class="mt-2 w-full !bg-white !text-ink"
+              type="email"
+              formControlName="email"
+              autocomplete="email"
+              autocapitalize="none"
+              spellcheck="false"
+              maxlength="255"
+            />
+            @if (form.controls.email.touched && form.controls.email.invalid) {
+              <span class="mt-1 block text-xs font-normal text-danger-700"
+                >Ingresa un correo electrónico válido.</span
+              >
+            }
+          </label>
+          <div>
+            <label for="technician-specialties" class="block text-sm font-medium text-ink">
+              Especialidades <span class="font-normal text-ink-muted">(opcional)</span>
+            </label>
+            <p id="specialties-hint" class="mt-1 text-xs text-ink-muted">
+              El técnico podrá recibir asignaciones automáticas de las categorías seleccionadas.
+            </p>
+            @if (categoryError()) {
+              <p class="mt-1 text-xs text-danger-700" role="alert">{{ categoryError() }}</p>
+            }
+            <p-multiselect
+              inputId="technician-specialties"
+              class="mt-2 block w-full"
+              [options]="categories()"
+              optionLabel="name"
+              optionValue="id"
+              placeholder="Selecciona una o más categorías"
+              display="chip"
+              [maxSelectedLabels]="3"
+              aria-describedby="specialties-hint"
+              formControlName="categoryIds"
+            ></p-multiselect>
+          </div>
+          <div>
+            <div class="flex flex-wrap items-end justify-between gap-2">
+              <label for="generated-password" class="block text-sm font-medium text-ink">
+                Contraseña temporal
+              </label>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-brand-700 hover:bg-brand-50"
+                (click)="generatePassword()"
+              >
+                <svg lucideRefreshCw [size]="16" aria-hidden="true"></svg>
+                Generar otra
+              </button>
+            </div>
+            <input
+              id="generated-password"
+              pInputText
+              class="mt-2 w-full !bg-canvas !font-mono !text-ink"
+              type="text"
+              [value]="password()"
+              readonly
+              autocomplete="new-password"
+              aria-describedby="password-hint"
+            />
+            <span id="password-hint" class="mt-1 block text-xs font-normal text-ink-muted">
+              20 caracteres, con mayúsculas, minúsculas, números y símbolos. Podrás copiarla al
+              crear la cuenta.
+            </span>
+            @if (passwordError()) {
+              <span class="mt-1 block text-xs font-normal text-danger-700" role="alert">{{
+                passwordError()
+              }}</span>
+            }
+          </div>
+
+          @if (error() && modalOpen()) {
+            <p role="alert" class="rounded-lg bg-danger-50 px-3 py-2.5 text-sm text-danger-700">
+              {{ error() }}
+            </p>
+          }
+        </div>
+
+        <div class="flex justify-end gap-2 border-t border-line px-5 py-4 sm:px-6">
+          <button
+            type="button"
+            class="rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink-muted hover:bg-canvas disabled:opacity-50"
+            [disabled]="saving()"
+            (click)="closeModal()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+            [disabled]="form.invalid || saving()"
+          >
+            {{ saving() ? 'Creando técnico…' : 'Crear técnico' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (detailModalOpen()) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+    role="presentation"
+    (click)="dismissDetailsOnBackdrop($event)"
+    (keydown.escape)="closeDetails()"
+  >
+    <section
+      class="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl border border-line bg-white shadow-2xl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="technician-detail-title"
+    >
+      <header class="flex items-center justify-between border-b border-line px-5 py-4 sm:px-6">
+        <h2 id="technician-detail-title" class="text-lg font-semibold">Detalle del técnico</h2>
+        <button
+          type="button"
+          class="rounded-md p-2 text-ink-muted hover:bg-canvas"
+          aria-label="Cerrar detalles"
+          (click)="closeDetails()"
+        >
+          <svg lucideX [size]="18" aria-hidden="true"></svg>
+        </button>
+      </header>
+
+      @if (selectedTechnician(); as technician) {
+        <div class="space-y-5 px-5 py-5 sm:px-6">
+          <dl class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <dt class="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                Nombre completo
+              </dt>
+              <dd class="mt-1 text-sm font-medium text-ink">{{ technician.fullName }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                Correo electrónico
+              </dt>
+              <dd class="mt-1 text-sm text-ink">{{ technician.email }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Rol</dt>
+              <dd class="mt-1 text-sm text-ink">Técnico</dd>
+            </div>
+            <div>
+              <dt class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Estado</dt>
+              <dd class="mt-1">
+                <span
+                  class="rounded-full px-2.5 py-1 text-xs font-medium"
+                  [class.bg-success-50]="technician.active"
+                  [class.text-success-700]="technician.active"
+                  [class.bg-canvas]="!technician.active"
+                  [class.text-ink-muted]="!technician.active"
+                >
+                  {{ technician.active ? 'Activo' : 'Inactivo' }}
+                </span>
+              </dd>
+            </div>
+          </dl>
+
+          <div>
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+              Especialidades
+            </h3>
+            @if (detailLoading()) {
+              <p class="mt-2 text-sm text-ink-muted" role="status">Cargando especialidades…</p>
+            } @else if (selectedSpecialties().length === 0) {
+              <p class="mt-2 text-sm text-ink-muted">Sin especialidades asignadas.</p>
+            } @else {
+              <div class="mt-2 flex flex-wrap gap-2">
+                @for (specialty of selectedSpecialties(); track specialty) {
+                  <span
+                    class="rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700"
+                  >
+                    {{ specialty }}
+                  </span>
+                }
+              </div>
+            }
+          </div>
+
+          @if (error()) {
+            <p role="alert" class="rounded-lg bg-danger-50 px-3 py-2.5 text-sm text-danger-700">
+              {{ error() }}
+            </p>
+          }
+        </div>
+      }
+
+      <div class="flex justify-end border-t border-line px-5 py-4 sm:px-6">
+        <button
+          type="button"
+          class="rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink-muted hover:bg-canvas"
+          (click)="closeDetails()"
+        >
+          Cerrar
+        </button>
+      </div>
+    </section>
+  </div>
+}

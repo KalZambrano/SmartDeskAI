@@ -5,3 +5,15 @@ export interface TechnicianOption {
   role: 'TECHNICIAN';
   active: boolean;
 }
+
+export interface CreateTechnicianRequest {
+  fullName: string;
+  email: string;
+  password: string;
+  role: 'TECHNICIAN';
+}
+
+export interface TechnicianSpecialty {
+  categoryId: number;
+  categoryName: string;
+}
