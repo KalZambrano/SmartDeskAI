@@ -4,20 +4,31 @@
       <p class="text-xs font-semibold uppercase tracking-widest text-brand-700">Reportes</p>
       <h1 id="dashboard-title" class="mt-1 text-2xl font-semibold text-ink">Dashboard</h1>
       <p class="mt-1 text-sm text-ink-muted">
-        Indicadores calculados a partir de las incidencias persistidas según tu rol.
+        Indicadores y tendencias calculados a partir de las incidencias persistidas según tu rol.
       </p>
     </div>
-    @if (isAdmin()) {
+    <div class="flex flex-wrap items-center gap-2">
       <button
         type="button"
-        class="inline-flex items-center gap-2 rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-900 disabled:opacity-50"
-        [disabled]="exporting()"
-        (click)="exportCsv()"
+        class="inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2.5 text-sm font-medium text-ink-muted hover:bg-canvas hover:text-ink"
+        [attr.aria-pressed]="showTables()"
+        (click)="showTables.set(!showTables())"
       >
-        <svg lucideDownload [size]="16" aria-hidden="true"></svg>
-        Exportar CSV
+        <svg lucideTable [size]="16" aria-hidden="true"></svg>
+        {{ showTables() ? 'Ver gráficos' : 'Ver tablas' }}
       </button>
-    }
+      @if (isAdmin()) {
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-900 disabled:opacity-50"
+          [disabled]="exporting()"
+          (click)="exportCsv()"
+        >
+          <svg lucideDownload [size]="16" aria-hidden="true"></svg>
+          Exportar CSV
+        </button>
+      }
+    </div>
   </header>
 
   <form
@@ -145,6 +156,10 @@
         <div class="h-24 animate-pulse rounded-lg border border-line bg-surface"></div>
       }
     </div>
+    <div class="grid gap-4 lg:grid-cols-2" aria-hidden="true">
+      <div class="h-72 animate-pulse rounded-lg border border-line bg-surface"></div>
+      <div class="h-72 animate-pulse rounded-lg border border-line bg-surface"></div>
+    </div>
     <p class="sr-only">Calculando indicadores…</p>
   } @else if (loadState() === 'error') {
     <div class="rounded-lg border border-danger-700/20 bg-danger-50 p-6" role="alert">
@@ -193,69 +208,296 @@
       </div>
     </article>
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      @for (
-        kpi of [
-          { label: 'Total', value: data.total },
-          { label: 'Abiertas', value: data.open },
-          { label: 'En atención', value: data.inProgress },
-          { label: 'Pendientes', value: data.pending },
-          { label: 'Resueltas', value: data.resolved },
-          { label: 'Cerradas', value: data.closed },
-          { label: 'Vencidas', value: data.overdue },
-          { label: 'Resolución prom. (h)', value: data.averageResolutionHours },
-        ];
-        track kpi.label
-      ) {
-        <article class="rounded-lg border border-line bg-surface p-4 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wide text-ink-muted">{{ kpi.label }}</p>
-          <p class="mt-2 text-2xl font-semibold text-ink">{{ kpi.value }}</p>
+    <div aria-labelledby="main-kpis-title">
+      <h2 id="main-kpis-title" class="sr-only">Indicadores principales</h2>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        @for (kpi of primaryKpis(); track kpi.label) {
+          <article
+            class="rounded-xl border border-line border-l-4 bg-surface p-5 shadow-sm"
+            [style.border-left-color]="kpi.color"
+          >
+            <p class="text-xs font-medium uppercase tracking-wide text-ink-muted">
+              {{ kpi.label }}
+            </p>
+            <p class="mt-2 text-3xl font-semibold tabular-nums text-ink">{{ kpi.value }}</p>
+            <p class="mt-1 text-xs text-ink-muted">{{ kpi.hint }}</p>
+          </article>
+        }
+      </div>
+    </div>
+
+    <div aria-labelledby="secondary-kpis-title">
+      <h2
+        id="secondary-kpis-title"
+        class="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted"
+      >
+        Indicadores complementarios
+      </h2>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        @for (kpi of secondaryKpis(); track kpi.label) {
+          <article
+            class="flex items-baseline justify-between gap-2 rounded-lg border border-line bg-surface px-4 py-3"
+          >
+            <span class="text-xs text-ink-muted">{{ kpi.label }}</span>
+            <span class="text-lg font-semibold tabular-nums text-ink">{{ kpi.value }}</span>
+          </article>
+        }
+      </div>
+    </div>
+
+    @if (showTables()) {
+      <div class="grid gap-4 lg:grid-cols-2" aria-label="Datos del dashboard en formato tabla">
+        <article class="rounded-xl border border-line bg-surface p-5 shadow-sm">
+          <h2 class="text-sm font-semibold text-ink">Distribución por prioridad</h2>
+          <table class="mt-3 w-full text-left text-sm">
+            <caption class="sr-only">
+              Cantidad de incidencias por prioridad
+            </caption>
+            <thead class="border-b border-line text-xs uppercase text-ink-muted">
+              <tr>
+                <th scope="col" class="py-2">Prioridad</th>
+                <th scope="col" class="py-2 text-right">Incidencias</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-line">
+              @for (item of priorityLegend(); track item.label) {
+                <tr>
+                  <td class="py-2">{{ item.label }}</td>
+                  <td class="py-2 text-right tabular-nums">{{ item.value }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="2" class="py-3 text-ink-muted">Sin datos en el periodo.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
         </article>
-      }
-    </div>
 
-    <div class="grid gap-4 lg:grid-cols-2">
-      <article class="rounded-lg border border-line bg-surface p-5 shadow-sm">
-        <h2 class="text-sm font-semibold text-ink">Distribución por prioridad</h2>
-        <ul class="mt-4 space-y-3">
-          @for (entry of entries(data.byPriority); track entry[0]) {
-            <li>
-              <div class="flex justify-between text-xs text-ink-muted">
-                <span>{{ entry[0] }}</span><span>{{ entry[1] }}</span>
-              </div>
-              <div class="mt-1 h-2 rounded-full bg-canvas">
-                <div
-                  class="h-2 rounded-full bg-brand-600"
-                  [style.width.%]="data.total ? (entry[1] / data.total) * 100 : 0"
-                ></div>
-              </div>
-            </li>
-          } @empty {
-            <li class="text-sm text-ink-muted">Sin datos en el periodo.</li>
-          }
-        </ul>
-      </article>
+        <article class="rounded-xl border border-line bg-surface p-5 shadow-sm">
+          <h2 class="text-sm font-semibold text-ink">Distribución por categoría</h2>
+          <table class="mt-3 w-full text-left text-sm">
+            <caption class="sr-only">
+              Cantidad de incidencias por categoría
+            </caption>
+            <thead class="border-b border-line text-xs uppercase text-ink-muted">
+              <tr>
+                <th scope="col" class="py-2">Categoría</th>
+                <th scope="col" class="py-2 text-right">Incidencias</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-line">
+              @for (item of categoryLegend(); track item.label) {
+                <tr>
+                  <td class="py-2">{{ item.label }}</td>
+                  <td class="py-2 text-right tabular-nums">{{ item.value }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="2" class="py-3 text-ink-muted">Sin datos en el periodo.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </article>
 
-      <article class="rounded-lg border border-line bg-surface p-5 shadow-sm">
-        <h2 class="text-sm font-semibold text-ink">Distribución por categoría</h2>
-        <ul class="mt-4 space-y-3">
-          @for (entry of entries(data.byCategory); track entry[0]) {
-            <li>
-              <div class="flex justify-between text-xs text-ink-muted">
-                <span>{{ entry[0] }}</span><span>{{ entry[1] }}</span>
+        <article class="rounded-xl border border-line bg-surface p-5 shadow-sm">
+          <h2 class="text-sm font-semibold text-ink">Carga de trabajo por técnico</h2>
+          <table class="mt-3 w-full text-left text-sm">
+            <caption class="sr-only">
+              Incidencias activas por técnico
+            </caption>
+            <thead class="border-b border-line text-xs uppercase text-ink-muted">
+              <tr>
+                <th scope="col" class="py-2">Técnico</th>
+                <th scope="col" class="py-2 text-right">Activas</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-line">
+              @for (item of workloadLegend(); track item.label) {
+                <tr>
+                  <td class="py-2">{{ item.label }}</td>
+                  <td class="py-2 text-right tabular-nums">{{ item.value }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="2" class="py-3 text-ink-muted">Sin incidencias activas.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </article>
+
+        <article class="rounded-xl border border-line bg-surface p-5 shadow-sm">
+          <h2 class="text-sm font-semibold text-ink">Creadas vs. resueltas por día</h2>
+          <table class="mt-3 w-full text-left text-sm">
+            <caption class="sr-only">
+              Serie diaria de incidencias creadas y resueltas
+            </caption>
+            <thead class="border-b border-line text-xs uppercase text-ink-muted">
+              <tr>
+                <th scope="col" class="py-2">Fecha</th>
+                <th scope="col" class="py-2 text-right">Creadas</th>
+                <th scope="col" class="py-2 text-right">Resueltas</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-line">
+              @for (point of timeline(); track point.date) {
+                <tr>
+                  <td class="py-2">{{ point.date }}</td>
+                  <td class="py-2 text-right tabular-nums">{{ point.created }}</td>
+                  <td class="py-2 text-right tabular-nums">{{ point.resolved }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="3" class="py-3 text-ink-muted">Sin datos en el periodo.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </article>
+      </div>
+    } @else {
+      <div class="grid gap-4 lg:grid-cols-2">
+        <article
+          class="rounded-xl border border-line bg-surface p-5 shadow-sm"
+          aria-labelledby="priority-title"
+        >
+          <h2 id="priority-title" class="text-sm font-semibold text-ink">
+            Distribución por prioridad
+          </h2>
+          <div class="mt-3 grid items-center gap-4 sm:grid-cols-[14rem_1fr]">
+            @if (priorityLegend().length) {
+              <div class="mx-auto h-56 w-56">
+                <p-chart
+                  type="doughnut"
+                  [data]="priorityChart()"
+                  [options]="doughnutOptions"
+                  ariaLabel="Distribución de incidencias por prioridad"
+                  ariaLabelledBy="priority-title"
+                ></p-chart>
               </div>
-              <div class="mt-1 h-2 rounded-full bg-canvas">
-                <div
-                  class="h-2 rounded-full bg-brand-600"
-                  [style.width.%]="data.total ? (entry[1] / data.total) * 100 : 0"
-                ></div>
-              </div>
-            </li>
-          } @empty {
-            <li class="text-sm text-ink-muted">Sin datos en el periodo.</li>
+              <ul class="space-y-2">
+                @for (item of priorityLegend(); track item.label) {
+                  <li class="flex items-center justify-between gap-2 text-sm">
+                    <span class="flex items-center gap-2 text-ink-muted">
+                      <span
+                        class="h-2.5 w-2.5 rounded-sm"
+                        [style.background-color]="item.color"
+                        aria-hidden="true"
+                      ></span>
+                      {{ item.label }}
+                    </span>
+                    <span class="font-medium tabular-nums text-ink">{{ item.value }}</span>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="text-sm text-ink-muted sm:col-span-2">Sin datos en el periodo.</p>
+            }
+          </div>
+        </article>
+
+        <article
+          class="rounded-xl border border-line bg-surface p-5 shadow-sm"
+          aria-labelledby="category-title"
+        >
+          <h2 id="category-title" class="text-sm font-semibold text-ink">
+            Distribución por categoría
+          </h2>
+          @if (categoryLegend().length) {
+            <div class="mt-3 h-56">
+              <p-chart
+                type="bar"
+                [data]="categoryChart()"
+                [options]="barOptions"
+                ariaLabel="Distribución de incidencias por categoría"
+                ariaLabelledBy="category-title"
+              ></p-chart>
+            </div>
+            <ul class="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+              @for (item of categoryLegend(); track item.label) {
+                <li class="flex items-center gap-2 text-xs text-ink-muted">
+                  <span
+                    class="h-2.5 w-2.5 rounded-sm"
+                    [style.background-color]="item.color"
+                    aria-hidden="true"
+                  ></span>
+                  {{ item.label }} <span class="font-medium text-ink">{{ item.value }}</span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="mt-3 text-sm text-ink-muted">Sin datos en el periodo.</p>
           }
-        </ul>
-      </article>
-    </div>
+        </article>
+
+        <article
+          class="rounded-xl border border-line bg-surface p-5 shadow-sm lg:col-span-2"
+          aria-labelledby="timeline-title"
+        >
+          <div class="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 id="timeline-title" class="text-sm font-semibold text-ink">
+              Creadas vs. resueltas por día
+            </h2>
+            <p class="text-xs text-ink-muted">
+              Últimos {{ timeline().length }} días (UTC) ·
+              <span class="font-medium text-brand-700">{{ timelineTotals().created }} creadas</span>
+              ·
+              <span class="font-medium text-success-700"
+                >{{ timelineTotals().resolved }} resueltas</span
+              >
+            </p>
+          </div>
+          @if (timeline().length) {
+            <div class="mt-3 h-64">
+              <p-chart
+                type="line"
+                [data]="timelineChart()"
+                [options]="lineOptions"
+                ariaLabel="Tendencia diaria de incidencias creadas y resueltas"
+                ariaLabelledBy="timeline-title"
+              ></p-chart>
+            </div>
+          } @else {
+            <p class="mt-3 text-sm text-ink-muted">Sin datos en el periodo.</p>
+          }
+        </article>
+
+        <article
+          class="rounded-xl border border-line bg-surface p-5 shadow-sm lg:col-span-2"
+          aria-labelledby="workload-title"
+        >
+          <h2 id="workload-title" class="text-sm font-semibold text-ink">
+            Carga de trabajo por técnico
+          </h2>
+          @if (workloadLegend().length) {
+            <div class="mt-3 h-64">
+              <p-chart
+                type="bar"
+                [data]="workloadChart()"
+                [options]="barOptions"
+                ariaLabel="Incidencias activas por técnico"
+                ariaLabelledBy="workload-title"
+              ></p-chart>
+            </div>
+            <ul class="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+              @for (item of workloadLegend(); track item.label) {
+                <li class="flex items-center gap-2 text-xs text-ink-muted">
+                  <span
+                    class="h-2.5 w-2.5 rounded-sm"
+                    [style.background-color]="item.color"
+                    aria-hidden="true"
+                  ></span>
+                  {{ item.label }} <span class="font-medium text-ink">{{ item.value }}</span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="mt-3 text-sm text-ink-muted">Sin incidencias activas en el periodo.</p>
+          }
+        </article>
+      </div>
+    }
   }
 </section>

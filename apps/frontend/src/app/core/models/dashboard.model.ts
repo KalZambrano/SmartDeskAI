@@ -5,6 +5,12 @@ export interface WorkloadItem {
   activeTickets: number;
 }
 
+export interface TimelinePoint {
+  date: string;
+  created: number;
+  resolved: number;
+}
+
 export interface DashboardSummary {
   total: number;
   open: number;
@@ -17,6 +23,7 @@ export interface DashboardSummary {
   byPriority: Record<string, number>;
   byCategory: Record<string, number>;
   workload: WorkloadItem[];
+  timeline: TimelinePoint[];
 }
 
 export interface DashboardFilters {
