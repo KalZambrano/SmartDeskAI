@@ -70,6 +70,7 @@ public class Ticket {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getResolvedAt() { return resolvedAt; }
     public void setStatus(TicketStatus status) { this.status = status; this.resolvedAt = status == TicketStatus.RESOLVED ? Instant.now() : null; }
+    public void setDueAt(Instant dueAt) { this.dueAt = dueAt; }
     public void setCategory(pe.edu.utp.smartdesk.category.Category category) { this.category = category; }
     public void update(String title, String description, TicketPriority priority) {
         this.title=title; this.description=description; this.priority=priority;
