@@ -1,18 +1,87 @@
-# API
+# API REST
 
-La Fase 0 expone únicamente el endpoint público GET /api/v1/health.
+Prefijo: `/api/v1`. Todas las respuestas son JSON y no exponen entidades JPA.
 
-La documentación de autenticación y recursos protegidos se completará junto con las fases funcionales.
+## Autenticación
 
-### `GET /api/v1/tickets`
+| Método | Endpoint | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/auth/login` | Público | Devuelve `{ token, user }`. |
+| POST | `/auth/bootstrap` | Público, solo una vez | Crea el administrador inicial; se cierra cuando ya existe un usuario. |
+| GET | `/auth/me` | Autenticado | Usuario autenticado. |
 
-Lista las incidencias permitidas según el rol del usuario. Acepta filtros opcionales, aplicados en base de datos:
+El token JWT se envía como `Authorization: Bearer <token>`.
+
+## Usuarios y categorías
+
+| Método | Endpoint | Acceso |
+|---|---|---|
+| GET | `/users` | Admin |
+| POST | `/users` | Admin |
+| GET | `/users/{id}/specialties` | Admin |
+| PUT | `/users/{id}/specialties` | Admin |
+| PATCH | `/users/{id}/active` | Admin |
+| GET | `/categories` | Autenticado (activas) |
+| GET | `/categories/manage` | Admin (todas) |
+| POST / PUT / DELETE | `/categories` | Admin |
+
+`PUT /users/{id}/specialties` recibe `{ "categoryIds": [1, 2] }`; una lista vacía elimina las especialidades.
+
+## Incidencias
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| GET | `/tickets` | Lista paginada según rol, con filtros en base de datos. |
+| POST | `/tickets` | Alta; clasifica con IA/reglas y asigna automáticamente. |
+| GET | `/tickets/{id}` | Detalle (solo si el rol da acceso). |
+| PUT | `/tickets/{id}` | Edición (admin o solicitante propietario; no si está cerrada). |
+| PATCH | `/tickets/{id}/status` | Transición validada por backend. |
+| PATCH | `/tickets/{id}/assignment` | Reasignación manual (admin). |
+| GET / POST | `/tickets/{id}/comments` | Comentarios. |
+| GET | `/tickets/{id}/history` | Historial de solo lectura. |
+| POST | `/tickets/{id}/ai-analysis` | Nueva clasificación explícita (consume cuota). |
+
+### Filtros de `GET /tickets`
 
 | Parámetro | Tipo | Descripción |
 |---|---|---|
 | `status` | `OPEN`, `IN_PROGRESS`, `PENDING`, `RESOLVED`, `CLOSED` | Estado exacto. |
 | `priority` | `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` | Prioridad exacta. |
 | `categoryId` | `Long` | Categoría exacta. |
-| `q` | `string` | Texto a buscar en el código o el título (sin distinción de mayúsculas). Máximo 100 caracteres. |
+| `q` | `string` | Texto en código o título (máx. 100 caracteres). |
+| `page` | `int` | Página basada en 0; por defecto `0`. |
+| `size` | `int` | Tamaño de página entre 1 y 100; por defecto `20`. |
 
-Los filtros se combinan con el alcance por rol: un solicitante solo ve sus incidencias y un técnico solo las asignadas. Un valor de enum inválido devuelve `400`.
+Los filtros se combinan con el alcance por rol: el solicitante ve solo las suyas, el técnico solo las asignadas y el admin todas. Un enum inválido devuelve `400`, igual que `page < 0` o `size` fuera de rango.
+
+`GET /tickets` responde `{ "content": [...], "page": 0, "size": 20, "totalElements": 45, "totalPages": 3, "first": true, "last": false }`. El orden es `createdAt` descendente con `id` descendente como desempate, para que las páginas sean estables. El resto de listados (comentarios, historial, notificaciones) siguen devolviendo arreglos.
+
+## Notificaciones
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| GET | `/notifications` | Últimas 50 notificaciones propias. |
+| GET | `/notifications/unread-count` | `{ "count": n }`. |
+| PATCH | `/notifications/{id}/read` | Marca como leída una propia; una ajena devuelve `404`. |
+
+## Dashboard y reportes
+
+| Método | Endpoint | Acceso | Descripción |
+|---|---|---|---|
+| GET | `/dashboard/summary` | Autenticado | KPIs y distribuciones según el alcance por rol. |
+| GET | `/dashboard/reports` | Admin | Resumen + filas detalladas. |
+| GET | `/dashboard/reports/export` | Admin | CSV UTF-8 con `;`, cabecera `Content-Disposition`. |
+
+Los tres aceptan los filtros opcionales `from`, `to` (ISO-8601), `status`, `priority` y `categoryId`; se combinan con el alcance por rol. `from`/`to` inválidos devuelven `400`. El CSV escapa celdas que empiezan con `=`, `+`, `-` o `@` para evitar inyección de fórmulas.
+
+## Modo demostración
+
+| Método | Endpoint | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/demo/tickets/{id}/overdue` | Admin | Fija `due_at` un minuto en el pasado para probar el escalamiento. |
+
+Solo existe si `DEMO_MODE_ENABLED=true`; con el valor por defecto (`false`) responde `404`. No altera las reglas de cálculo de vencimientos del registro normal.
+
+## Estado
+
+`GET /health` es público y devuelve `{ status, application, timestamp }`.

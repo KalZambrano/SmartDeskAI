@@ -33,9 +33,9 @@ En PowerShell:
 
 Abre http://localhost:4200 o http://localhost:8080/api/v1/health.
 
-## Datos de demostración (Fase 1)
+## Datos de demostración
 
-Con el stack levantado, crea el administrador, el solicitante y el técnico. El script es idempotente, así que puedes repetirlo sin miedo:
+Con el stack levantado, crea el administrador, el solicitante y el técnico, así como una incidencia de red vencida. El script es idempotente, así que puedes repetirlo sin miedo. Para que la incidencia quede vencida, define `DEMO_MODE_ENABLED=true` en `.env` antes de levantar los contenedores:
 
     pwsh infra/scripts/seed-demo.ps1        # Windows
     bash infra/scripts/seed-demo.sh         # Linux, macOS o contenedor
@@ -54,6 +54,8 @@ Si prefieres hacerlo a mano, el administrador inicial se crea una sola vez:
     Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/v1/auth/bootstrap -ContentType "application/json" -Body $payload
 
 La ruta `/api/v1/auth/bootstrap` se cierra automáticamente cuando existe el primer usuario.
+
+`DEMO_MODE_ENABLED=true` habilita además `POST /api/v1/demo/tickets/{id}/overdue` (solo ADMIN) para simular vencimientos. Con el valor por defecto (`false`) el endpoint responde `404`.
 
 ## Ejecutar solo el backend en local
 
