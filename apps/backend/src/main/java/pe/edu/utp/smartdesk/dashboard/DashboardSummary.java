@@ -14,7 +14,11 @@ public record DashboardSummary(
         double averageResolutionHours,
         Map<String, Long> byPriority,
         Map<String, Long> byCategory,
-        List<WorkloadItem> workload) {
+        List<WorkloadItem> workload,
+        List<TimelinePoint> timeline) {
 
     public record WorkloadItem(String technician, long activeTickets) {}
+
+    /** Día en UTC (AAAA-MM-DD) con incidencias creadas y resueltas. */
+    public record TimelinePoint(String date, long created, long resolved) {}
 }

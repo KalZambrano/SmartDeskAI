@@ -3,6 +3,8 @@ package pe.edu.utp.smartdesk.dashboard;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +27,8 @@ import pe.edu.utp.smartdesk.user.User;
  */
 @Service
 public class DashboardService {
+    private static final int TIMELINE_DAYS = 14;
+
     private final TicketRepository tickets;
     private final Clock clock;
 
@@ -84,7 +88,31 @@ public class DashboardService {
                 Math.round(average * 100.0) / 100.0,
                 byPriority,
                 byCategory,
-                workloadItems);
+                workloadItems,
+                timeline(items, now));
+    }
+
+    /** Últimos 14 días UTC; created/resolved cuentan las fechas de createdAt/resolvedAt. */
+    private static List<DashboardSummary.TimelinePoint> timeline(List<Ticket> items, Instant now) {
+        LocalDate start = LocalDate.ofInstant(now, ZoneOffset.UTC).minusDays(TIMELINE_DAYS - 1L);
+        Map<LocalDate, long[]> counts = new LinkedHashMap<>();
+        for (int day = 0; day < TIMELINE_DAYS; day++) counts.put(start.plusDays(day), new long[2]);
+
+        for (Ticket ticket : items) {
+            if (ticket.getCreatedAt() != null) {
+                long[] created = counts.get(LocalDate.ofInstant(ticket.getCreatedAt(), ZoneOffset.UTC));
+                if (created != null) created[0]++;
+            }
+            if (ticket.getResolvedAt() != null) {
+                long[] resolved = counts.get(LocalDate.ofInstant(ticket.getResolvedAt(), ZoneOffset.UTC));
+                if (resolved != null) resolved[1]++;
+            }
+        }
+
+        return counts.entrySet().stream()
+                .map(entry -> new DashboardSummary.TimelinePoint(
+                        entry.getKey().toString(), entry.getValue()[0], entry.getValue()[1]))
+                .toList();
     }
 
     public String toCsv(List<Ticket> items) {

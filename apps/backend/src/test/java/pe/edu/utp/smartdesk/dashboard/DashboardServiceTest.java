@@ -53,6 +53,14 @@ class DashboardServiceTest {
         assertThat(summary.byPriority()).containsEntry("HIGH", 1L).containsEntry("CRITICAL", 1L);
         assertThat(summary.byCategory()).containsEntry("Redes", 2L).containsEntry("Sin categoría", 1L);
         assertThat(summary.workload()).containsExactly(new DashboardSummary.WorkloadItem("Técnico", 2));
+        assertThat(summary.timeline()).hasSize(14);
+        assertThat(summary.timeline().getFirst())
+                .isEqualTo(new DashboardSummary.TimelinePoint("2026-11-08", 0, 0));
+        assertThat(summary.timeline().getLast())
+                .isEqualTo(new DashboardSummary.TimelinePoint("2026-11-21", 0, 0));
+        assertThat(summary.timeline().stream()
+                .filter(point -> point.date().equals("2026-11-20")).findFirst().orElseThrow())
+                .isEqualTo(new DashboardSummary.TimelinePoint("2026-11-20", 4, 1));
     }
 
     @Test
