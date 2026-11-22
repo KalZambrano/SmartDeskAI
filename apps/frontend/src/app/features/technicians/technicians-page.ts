@@ -16,6 +16,7 @@ import { CategoryService } from '@/core/services/category.service';
 import { TechnicianService } from '@/core/services/technician.service';
 import { TicketCategory } from '@/core/models/category.model';
 import { TechnicianOption } from '@/core/models/technician.model';
+import { generateTemporaryPassword } from '@/core/utils/password';
 
 interface NewTechnicianCredential {
   fullName: string;
@@ -121,23 +122,7 @@ export class TechniciansPage implements OnInit, OnDestroy {
 
   protected generatePassword(): void {
     try {
-      const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-      const lowercase = 'abcdefghijkmnopqrstuvwxyz';
-      const digits = '23456789';
-      const symbols = '!@#$%*-_+=';
-      const all = uppercase + lowercase + digits + symbols;
-      const generated = [
-        this.randomCharacter(uppercase),
-        this.randomCharacter(lowercase),
-        this.randomCharacter(digits),
-        this.randomCharacter(symbols),
-        ...Array.from({ length: 16 }, () => this.randomCharacter(all)),
-      ];
-      for (let index = generated.length - 1; index > 0; index--) {
-        const swapIndex = this.randomBelow(index + 1);
-        [generated[index], generated[swapIndex]] = [generated[swapIndex], generated[index]];
-      }
-      this.password.set(generated.join(''));
+      this.password.set(generateTemporaryPassword());
       this.passwordError.set('');
       this.copyStatus.set('');
     } catch {
@@ -275,19 +260,5 @@ export class TechniciansPage implements OnInit, OnDestroy {
       error: () =>
         this.error.set('No se pudo cambiar el estado del técnico. Inténtalo nuevamente.'),
     });
-  }
-
-  private randomCharacter(characters: string): string {
-    return characters[this.randomBelow(characters.length)]!;
-  }
-
-  private randomBelow(maxExclusive: number): number {
-    const range = 0x1_0000_0000;
-    const limit = Math.floor(range / maxExclusive) * maxExclusive;
-    const sample = new Uint32Array(1);
-    do {
-      globalThis.crypto.getRandomValues(sample);
-    } while (sample[0]! >= limit);
-    return sample[0]! % maxExclusive;
   }
 }
