@@ -5,10 +5,7 @@ RUN mvn --batch-mode dependency:go-offline
 COPY src ./src
 RUN mvn --batch-mode -DskipTests package
 
-FROM eclipse-temurin:21-jre-alpine
-RUN addgroup -S smartdesk && adduser -S smartdesk -G smartdesk
-WORKDIR /app
-COPY --from=build /workspace/target/smartdesk-backend.jar app.jar
-USER smartdesk
+FROM tomcat:11-jdk21
+ENV CATALINA_OPTS="-XX:MaxRAMPercentage=75"
+COPY --from=build /workspace/target/smartdesk-backend.war /usr/local/tomcat/webapps/ROOT.war
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]

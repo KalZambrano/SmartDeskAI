@@ -14,6 +14,7 @@
     <groupId>pe.edu.utp.smartdesk</groupId>
     <artifactId>smartdesk-backend</artifactId>
     <version>0.1.0-SNAPSHOT</version>
+    <packaging>war</packaging>
     <name>smartdesk-backend</name>
     <description>API REST de SmartDesk AI</description>
 
@@ -29,6 +30,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+        <!-- Tomcat externo lo aporta el contenedor; en pruebas y ejecución standalone sigue disponible. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-tomcat</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
