@@ -36,6 +36,13 @@ jobs:
       - run: pnpm format:check
       - run: pnpm test:ci
       - run: pnpm build
+      - name: Subir bundle del frontend
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-dist-${{ github.sha }}
+          path: apps/frontend/dist/frontend/browser
+          retention-days: 1
+          if-no-files-found: error
 
   backend:
     name: Backend
@@ -52,9 +59,16 @@ jobs:
           cache: maven
           cache-dependency-path: apps/backend/pom.xml
       - run: mvn --batch-mode verify
+      - name: Subir WAR del backend
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-war-${{ github.sha }}
+          path: apps/backend/target/smartdesk-backend.war
+          retention-days: 1
+          if-no-files-found: error
 
   infra:
-    name: Docker Compose
+    name: Docker Compose y despliegue Tomcat
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -62,3 +76,21 @@ jobs:
         run: |
           cp .env.example .env
           docker compose config --quiet
+      - name: Desplegar backend en Tomcat con Docker
+        run: docker compose --env-file .env.example up -d --build db backend
+      - name: Verificar healthcheck del despliegue
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error http://localhost:8080/api/v1/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "El backend en Tomcat no respondió /api/v1/health"
+          exit 1
+      - name: Logs del despliegue si falla
+        if: failure()
+        run: docker compose --env-file .env.example logs backend db
+      - name: Limpiar contenedores
+        if: always()
+        run: docker compose --env-file .env.example down -v
