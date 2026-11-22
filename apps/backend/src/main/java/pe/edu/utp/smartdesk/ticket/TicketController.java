@@ -3,6 +3,8 @@ package pe.edu.utp.smartdesk.ticket;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +14,8 @@ import pe.edu.utp.smartdesk.comment.TicketComment;
 import pe.edu.utp.smartdesk.comment.TicketCommentRepository;
 import pe.edu.utp.smartdesk.ai.TicketClassification;
 import pe.edu.utp.smartdesk.ai.TicketClassificationService;
+import pe.edu.utp.smartdesk.assignment.TicketAssignmentService;
+import pe.edu.utp.smartdesk.notification.NotificationService;
 import pe.edu.utp.smartdesk.user.*;
 
 @RestController
@@ -23,24 +27,31 @@ public class TicketController {
     private final UserRepository users;
     private final pe.edu.utp.smartdesk.category.CategoryRepository categories;
     private final TicketClassificationService classifier;
+    private final TicketAssignmentService assignment;
+    private final NotificationService notifications;
     public TicketController(TicketRepository tickets, TicketHistoryRepository history, TicketCommentRepository comments,
-            UserRepository users, pe.edu.utp.smartdesk.category.CategoryRepository categories, TicketClassificationService classifier) {
+            UserRepository users, pe.edu.utp.smartdesk.category.CategoryRepository categories,
+            TicketClassificationService classifier, TicketAssignmentService assignment,
+            NotificationService notifications) {
         this.tickets=tickets; this.history=history; this.comments=comments; this.users=users; this.categories=categories;
-        this.classifier=classifier;
+        this.classifier=classifier; this.assignment=assignment; this.notifications=notifications;
     }
     @GetMapping
-    public List<TicketDto> list(Authentication auth,
+    public PageResponse<TicketDto> list(Authentication auth,
             @RequestParam(required = false) TicketStatus status,
             @RequestParam(required = false) TicketPriority priority,
             @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) String q) {
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         User u=actor(auth);
         Long requesterId=u.getRole()==Role.REQUESTER ? u.getId() : null;
         Long technicianId=u.getRole()==Role.TECHNICIAN ? u.getId() : null;
         String query=q==null || q.isBlank() ? null : q.trim();
         if(query!=null && query.length()>100) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Búsqueda demasiado larga");
-        return tickets.search(requesterId,technicianId,status,priority,categoryId,query)
-                .stream().map(this::dto).toList();
+        if(page<0 || size<1 || size>100) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Paginación inválida");
+        return PageResponse.of(tickets.search(requesterId,technicianId,status,priority,categoryId,query,
+                PageRequest.of(page,size)).map(this::dto));
     }
     @PostMapping
     @Transactional
@@ -57,6 +68,10 @@ public class TicketController {
         if(req.categoryId()!=null) t.setCategory(categories.findById(req.categoryId()).orElseThrow(()->new ResponseStatusException(HttpStatus.BAD_REQUEST,"Categoría no válida")));
         applyClassification(t, classifier.classify(t.getTitle(), t.getDescription(), categories.findByActiveTrueOrderByNameAsc()));
         history.save(new TicketHistory(t,u,"CREATED",null,t.getStatus().name(),"Incidencia registrada"));
+        t = tickets.save(t);
+        assignment.assignAutomatically(t);
+        notifications.notify(u, t, "Incidencia registrada: " + t.getTicketCode(),
+                "Tu incidencia fue registrada y ya está en seguimiento.");
         return dto(tickets.save(t));
     }
     @GetMapping("/{id}")
@@ -101,6 +116,10 @@ public class TicketController {
             throw new ResponseStatusException(HttpStatus.CONFLICT,"Transición de estado no permitida");
         String previous=t.getStatus().name(); t.setStatus(next); tickets.save(t);
         history.save(new TicketHistory(t,user,"STATUS_CHANGED",previous,next.name(),"Estado actualizado"));
+        String message = "La incidencia " + t.getTicketCode() + " cambió de estado a " + next.name() + ".";
+        notifications.notify(t.getRequester(), t, "Estado actualizado: " + t.getTicketCode(), message);
+        if (t.getAssignedTechnician() != null && !t.getAssignedTechnician().getId().equals(user.getId()))
+            notifications.notify(t.getAssignedTechnician(), t, "Estado actualizado: " + t.getTicketCode(), message);
         return dto(t);
     }
     @PatchMapping("/{id}/assignment")
@@ -112,9 +131,8 @@ public class TicketController {
         User technician=users.findById(req.technicianId()).filter(User::isActive)
                 .filter(u->u.getRole()==Role.TECHNICIAN)
                 .orElseThrow(()->new ResponseStatusException(HttpStatus.BAD_REQUEST,"Técnico activo no encontrado"));
-        String old=t.getAssignedTechnician()==null?null:t.getAssignedTechnician().getEmail();
-        t.assign(technician); tickets.save(t);
-        history.save(new TicketHistory(t,admin,"ASSIGNED",old,technician.getEmail(),"Incidencia asignada"));
+        User previous = t.getAssignedTechnician();
+        assignment.notifyManualAssignment(t, previous, technician, admin);
         return dto(t);
     }
     @GetMapping("/{id}/comments")
@@ -156,4 +174,11 @@ public class TicketController {
     public record TicketDto(Long id,String ticketCode,String title,String description,String categoryName,String priority,String status,String requesterName,String assignedTechnicianName,Instant createdAt,Instant dueAt,String aiSuggestedCategoryName,String aiSuggestedPriority,String aiSummary,String aiSuggestedResponse,String aiReason,String aiClassificationSource) {}
     public record CommentDto(Long id,String authorName,String content,Instant createdAt) {}
     public record HistoryDto(Long id,String eventType,String description,Instant createdAt) {}
+    public record PageResponse<T>(List<T> content,int page,int size,long totalElements,int totalPages,
+            boolean first,boolean last) {
+        public static <T> PageResponse<T> of(Page<T> source) {
+            return new PageResponse<>(source.getContent(),source.getNumber(),source.getSize(),
+                    source.getTotalElements(),source.getTotalPages(),source.isFirst(),source.isLast());
+        }
+    }
 }

@@ -6,6 +6,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -44,5 +46,23 @@ class TicketSearchIT {
         assertThat(tickets.search(null, null, null, null, null, null))
                 .extracting(Ticket::getTicketCode)
                 .containsExactlyInAnyOrder("SD-900001", "SD-900002");
+    }
+
+    @Test
+    void pagedSearchReturnsRequestedSliceAndTotals() {
+        User requester = users.save(new User("Paginado", "page@test.local", "hash", Role.REQUESTER));
+        Instant due = Instant.now().plus(1, ChronoUnit.DAYS);
+        for (int i = 1; i <= 3; i++) {
+            tickets.save(new Ticket("SD-91000" + i, "PAGEIT tarea " + i, "desc",
+                    TicketPriority.LOW, requester, due));
+        }
+
+        Page<Ticket> page = tickets.search(null, null, null, null, null, "PAGEIT",
+                PageRequest.of(1, 2));
+
+        assertThat(page.getTotalElements()).isEqualTo(3);
+        assertThat(page.getTotalPages()).isEqualTo(2);
+        assertThat(page.getContent()).hasSize(1);
+        assertThat(page.getNumber()).isEqualTo(1);
     }
 }
