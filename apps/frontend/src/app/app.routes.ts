@@ -61,6 +61,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('@/features/technicians/technicians-page').then((m) => m.TechniciansPage),
       },
+      {
+        path: 'maestros/usuarios',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadComponent: () => import('@/features/users/users-page').then((m) => m.UsersPage),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

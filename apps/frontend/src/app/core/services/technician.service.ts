@@ -8,12 +8,10 @@ import {
   TechnicianSpecialty,
 } from '@/core/models/technician.model';
 
-interface UserRecord {
-  id: number;
-  fullName: string;
-  email: string;
+import { ManagedUser } from '@/core/models/user.model';
+
+interface UserRecord extends Omit<ManagedUser, 'role'> {
   role: string;
-  active: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

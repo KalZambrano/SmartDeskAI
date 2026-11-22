@@ -1,0 +1,360 @@
+<section class="mx-auto max-w-6xl">
+  <p class="text-sm font-medium text-brand-700">Maestros</p>
+  <header class="mt-1 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Usuarios</h1>
+      <p class="mt-1 text-sm text-ink-muted">
+        Crea y administra cuentas de administradores, técnicos y solicitantes.
+      </p>
+    </div>
+    <button
+      type="button"
+      class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+      (click)="create()"
+    >
+      <svg lucidePlus [size]="18" aria-hidden="true"></svg>
+      Nuevo usuario
+    </button>
+  </header>
+
+  @if (error() && !modalOpen()) {
+    <p role="alert" class="mt-5 rounded-lg bg-danger-50 px-4 py-3 text-sm text-danger-700">
+      {{ error() }}
+    </p>
+  }
+  @if (notice()) {
+    <p role="status" class="mt-5 rounded-lg bg-success-50 px-4 py-3 text-sm text-success-700">
+      {{ notice() }}
+    </p>
+  }
+
+  @if (credential(); as created) {
+    <section
+      class="mt-5 rounded-xl border border-brand-100 bg-brand-50 p-5"
+      aria-labelledby="user-credential-title"
+    >
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 id="user-credential-title" class="font-semibold text-brand-900">
+            Contraseña temporal
+          </h2>
+          <p class="mt-1 text-sm text-brand-900">
+            Comparte estas credenciales con {{ created.fullName }}. La contraseña solo se muestra
+            ahora.
+          </p>
+          <p class="mt-3 text-sm text-ink">
+            <span class="font-medium">Correo:</span> {{ created.email }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="self-start rounded-md p-2 text-ink-muted hover:bg-white hover:text-ink"
+          aria-label="Ocultar contraseña temporal"
+          (click)="hideCredential()"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <label class="sr-only" for="user-created-password"
+          >Contraseña temporal de {{ created.fullName }}</label
+        >
+        <input
+          id="user-created-password"
+          pInputText
+          class="w-full !bg-white !font-mono !text-ink sm:max-w-md"
+          type="text"
+          [value]="created.password"
+          readonly
+          autocomplete="off"
+        />
+        <button
+          type="button"
+          class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink hover:bg-canvas"
+          (click)="copyPassword(created.password)"
+        >
+          @if (copyStatus().startsWith('Contraseña copiada')) {
+            <svg lucideCheck [size]="17" aria-hidden="true"></svg>
+            Copiada
+          } @else {
+            <svg lucideCopy [size]="17" aria-hidden="true"></svg>
+            Copiar contraseña
+          }
+        </button>
+      </div>
+      <p class="mt-2 min-h-5 text-sm text-ink-muted" role="status" aria-live="polite">
+        {{ copyStatus() }}
+      </p>
+    </section>
+  }
+
+  <section
+    class="mt-6 overflow-hidden rounded-xl border border-line bg-white shadow-sm"
+    aria-labelledby="users-list-title"
+  >
+    <div class="border-b border-line px-5 py-4 sm:px-6">
+      <h2 id="users-list-title" class="text-base font-semibold">Usuarios registrados</h2>
+      <div class="mt-3 grid gap-3 sm:grid-cols-2">
+        <div>
+          <label for="users-role-filter" class="mb-1 block text-xs font-medium text-ink-muted">
+            Rol
+          </label>
+          <p-select
+            inputId="users-role-filter"
+            class="block w-full"
+            [options]="roleOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="roleFilter()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="roleFilter.set($event)"
+          ></p-select>
+        </div>
+        <div>
+          <label for="users-active-filter" class="mb-1 block text-xs font-medium text-ink-muted">
+            Estado
+          </label>
+          <p-select
+            inputId="users-active-filter"
+            class="block w-full"
+            [options]="activeOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="activeFilter()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="activeFilter.set($event)"
+          ></p-select>
+        </div>
+      </div>
+    </div>
+    @if (loading()) {
+      <p class="p-6 text-sm text-ink-muted" role="status">Cargando usuarios…</p>
+    } @else if (filteredUsers().length === 0) {
+      <div class="px-6 py-12 text-center">
+        <p class="text-sm text-ink-muted">No hay usuarios con esos filtros.</p>
+        @if (users().length === 0) {
+          <button
+            type="button"
+            class="mt-3 text-sm font-semibold text-brand-700 hover:underline"
+            (click)="create()"
+          >
+            Crear el primer usuario
+          </button>
+        }
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[760px] text-left text-sm">
+          <caption class="sr-only">
+            Usuarios registrados en SmartDesk
+          </caption>
+          <thead
+            class="border-b border-line bg-canvas text-xs font-semibold uppercase tracking-wide text-ink-muted"
+          >
+            <tr>
+              <th scope="col" class="px-5 py-3.5">Usuario</th>
+              <th scope="col" class="px-5 py-3.5">Correo</th>
+              <th scope="col" class="px-5 py-3.5">Rol</th>
+              <th scope="col" class="px-5 py-3.5">Estado</th>
+              <th scope="col" class="px-5 py-3.5 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            @for (user of filteredUsers(); track user.id) {
+              <tr class="hover:bg-slate-50/70">
+                <td class="px-5 py-4 font-medium text-ink">{{ user.fullName }}</td>
+                <td class="px-5 py-4 text-ink-muted">{{ user.email }}</td>
+                <td class="px-5 py-4 text-ink">{{ roleLabel(user.role) }}</td>
+                <td class="px-5 py-4">
+                  <span
+                    class="rounded-full px-2.5 py-1 text-xs font-medium"
+                    [class.bg-success-50]="user.active"
+                    [class.text-success-700]="user.active"
+                    [class.bg-canvas]="!user.active"
+                    [class.text-ink-muted]="!user.active"
+                    >{{ user.active ? 'Activo' : 'Inactivo' }}</span
+                  >
+                </td>
+                <td class="px-5 py-4">
+                  <div class="flex justify-end gap-1">
+                    <button
+                      type="button"
+                      class="rounded-md p-2 text-ink-muted transition hover:bg-brand-50 hover:text-brand-700"
+                      [attr.aria-label]="'Editar a ' + user.fullName"
+                      title="Editar"
+                      (click)="edit(user)"
+                    >
+                      <svg lucidePencil [size]="17" aria-hidden="true"></svg>
+                    </button>
+                    @if (user.active) {
+                      <button
+                        type="button"
+                        class="rounded-md p-2 text-ink-muted transition hover:bg-danger-50 hover:text-danger-700"
+                        [attr.aria-label]="'Desactivar a ' + user.fullName"
+                        title="Desactivar"
+                        (click)="setActive(user, false)"
+                      >
+                        <svg lucidePower [size]="17" aria-hidden="true"></svg>
+                      </button>
+                    } @else {
+                      <button
+                        type="button"
+                        class="rounded-md p-2 text-ink-muted transition hover:bg-success-50 hover:text-success-700"
+                        [attr.aria-label]="'Activar a ' + user.fullName"
+                        title="Activar"
+                        (click)="setActive(user, true)"
+                      >
+                        <svg lucideRotateCcw [size]="17" aria-hidden="true"></svg>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</section>
+
+@if (modalOpen()) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+    role="presentation"
+    (click)="dismissOnBackdrop($event)"
+    (keydown.escape)="closeModal()"
+  >
+    <section
+      class="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl border border-line bg-white shadow-2xl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="user-dialog-title"
+    >
+      <header class="flex items-center justify-between border-b border-line px-5 py-4 sm:px-6">
+        <h2 id="user-dialog-title" class="text-lg font-semibold">
+          {{ editingId() === null ? 'Nuevo usuario' : 'Editar usuario' }}
+        </h2>
+        <button
+          type="button"
+          class="rounded-md p-2 text-ink-muted hover:bg-canvas"
+          aria-label="Cerrar ventana"
+          [disabled]="saving()"
+          (click)="closeModal()"
+        >
+          <svg lucideX [size]="18" aria-hidden="true"></svg>
+        </button>
+      </header>
+      <form class="space-y-4" [formGroup]="form" (ngSubmit)="save()">
+        <div class="space-y-4 px-5 py-5 sm:px-6">
+          <label for="user-name" class="block text-sm font-medium text-ink">
+            Nombre completo <span class="font-normal text-ink-muted">(obligatorio)</span>
+            <input
+              id="user-name"
+              pInputText
+              class="mt-2 w-full !bg-white !text-ink"
+              formControlName="fullName"
+              autocomplete="name"
+              maxlength="120"
+            />
+            @if (form.controls.fullName.touched && form.controls.fullName.invalid) {
+              <span class="mt-1 block text-xs font-normal text-danger-700"
+                >Ingresa el nombre (máximo 120 caracteres).</span
+              >
+            }
+          </label>
+          <label for="user-email" class="block text-sm font-medium text-ink">
+            Correo electrónico <span class="font-normal text-ink-muted">(obligatorio)</span>
+            <input
+              id="user-email"
+              pInputText
+              class="mt-2 w-full !bg-white !text-ink"
+              type="email"
+              formControlName="email"
+              autocomplete="email"
+              autocapitalize="none"
+              spellcheck="false"
+              maxlength="255"
+            />
+            @if (form.controls.email.touched && form.controls.email.invalid) {
+              <span class="mt-1 block text-xs font-normal text-danger-700"
+                >Ingresa un correo electrónico válido.</span
+              >
+            }
+          </label>
+          <div>
+            <label for="user-role" class="block text-sm font-medium text-ink">Rol</label>
+            <p-select
+              inputId="user-role"
+              class="mt-2 block w-full"
+              [options]="formRoleOptions"
+              optionLabel="label"
+              optionValue="value"
+              formControlName="role"
+            ></p-select>
+          </div>
+          @if (editingId() === null) {
+            <div>
+              <div class="flex flex-wrap items-end justify-between gap-2">
+                <label for="user-password" class="block text-sm font-medium text-ink">
+                  Contraseña temporal
+                </label>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-brand-700 hover:bg-brand-50"
+                  (click)="generatePassword()"
+                >
+                  <svg lucideRotateCcw [size]="16" aria-hidden="true"></svg>
+                  Generar otra
+                </button>
+              </div>
+              <input
+                id="user-password"
+                pInputText
+                class="mt-2 w-full !bg-canvas !font-mono !text-ink"
+                type="text"
+                [value]="password()"
+                readonly
+                autocomplete="new-password"
+                aria-describedby="user-password-hint"
+              />
+              <span id="user-password-hint" class="mt-1 block text-xs font-normal text-ink-muted">
+                20 caracteres, con mayúsculas, minúsculas, números y símbolos. Podrás copiarla al
+                crear la cuenta.
+              </span>
+              @if (passwordError()) {
+                <span class="mt-1 block text-xs font-normal text-danger-700" role="alert">{{
+                  passwordError()
+                }}</span>
+              }
+            </div>
+          }
+          @if (error() && modalOpen()) {
+            <p role="alert" class="rounded-lg bg-danger-50 px-3 py-2.5 text-sm text-danger-700">
+              {{ error() }}
+            </p>
+          }
+        </div>
+        <div class="flex justify-end gap-2 border-t border-line px-5 py-4 sm:px-6">
+          <button
+            type="button"
+            class="rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink-muted hover:bg-canvas disabled:opacity-50"
+            [disabled]="saving()"
+            (click)="closeModal()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+            [disabled]="form.invalid || saving()"
+          >
+            {{
+              saving() ? 'Guardando…' : editingId() === null ? 'Crear usuario' : 'Guardar cambios'
+            }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
