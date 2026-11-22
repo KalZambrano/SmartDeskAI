@@ -40,6 +40,18 @@ export interface TicketFilters {
   status?: TicketStatus;
   priority?: TicketPriority;
   categoryId?: number;
+  page?: number;
+  size?: number;
+}
+
+export interface TicketPage {
+  content: TicketSummary[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
 }
 
 export interface CreateTicketRequest {

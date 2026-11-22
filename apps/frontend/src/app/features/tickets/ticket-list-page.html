@@ -191,9 +191,35 @@
           </tbody>
         </table>
       </div>
-      <p class="border-t border-line px-5 py-3 text-xs text-ink-muted">
-        {{ tickets().length }} {{ tickets().length === 1 ? 'incidencia' : 'incidencias' }}
-      </p>
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3">
+        <p class="text-xs text-ink-muted">
+          {{ rangeStart() }}–{{ rangeEnd() }} de {{ totalElements() }}
+          {{ totalElements() === 1 ? 'incidencia' : 'incidencias' }}
+        </p>
+        @if (totalPages() > 1) {
+          <nav class="flex items-center gap-2" aria-label="Paginación de incidencias">
+            <button
+              type="button"
+              class="inline-flex min-h-11 items-center rounded-lg border border-line px-3 text-sm font-medium text-ink hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-50"
+              [disabled]="page() === 0"
+              (click)="goToPage(page() - 1)"
+            >
+              Anterior
+            </button>
+            <span class="text-xs text-ink-muted" aria-live="polite">
+              Página {{ page() + 1 }} de {{ totalPages() }}
+            </span>
+            <button
+              type="button"
+              class="inline-flex min-h-11 items-center rounded-lg border border-line px-3 text-sm font-medium text-ink hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-50"
+              [disabled]="page() >= totalPages() - 1"
+              (click)="goToPage(page() + 1)"
+            >
+              Siguiente
+            </button>
+          </nav>
+        }
+      </div>
     </div>
   }
 </section>

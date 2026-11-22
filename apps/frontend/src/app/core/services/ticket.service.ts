@@ -7,6 +7,7 @@ import {
   TicketComment,
   TicketHistory,
   TicketFilters,
+  TicketPage,
   TicketSummary,
   TicketStatus,
 } from '@/core/models/ticket.model';
@@ -16,13 +17,15 @@ export class TicketService {
   private readonly http = inject(HttpClient);
   private readonly api = inject(API_BASE_URL) + '/tickets';
 
-  list(filters?: TicketFilters): Observable<TicketSummary[]> {
+  list(filters?: TicketFilters): Observable<TicketPage> {
     let params = new HttpParams();
     if (filters?.q?.trim()) params = params.set('q', filters.q.trim());
     if (filters?.status) params = params.set('status', filters.status);
     if (filters?.priority) params = params.set('priority', filters.priority);
     if (filters?.categoryId != null) params = params.set('categoryId', filters.categoryId);
-    return this.http.get<TicketSummary[]>(this.api, { params });
+    if (filters?.page != null) params = params.set('page', filters.page);
+    if (filters?.size != null) params = params.set('size', filters.size);
+    return this.http.get<TicketPage>(this.api, { params });
   }
   get(id: number): Observable<TicketSummary> {
     return this.http.get<TicketSummary>(this.api + '/' + id);

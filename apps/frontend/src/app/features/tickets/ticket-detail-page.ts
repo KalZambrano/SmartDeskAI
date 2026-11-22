@@ -38,6 +38,10 @@ export class TicketDetailPage implements OnInit {
   protected readonly loadingTechnicians = signal(false);
   protected readonly technicians = signal<TechnicianOption[]>([]);
   protected readonly selectedTechnicianId = signal<number | null>(null);
+  protected readonly currentTechnicianId = computed(() => {
+    const name = this.ticket()?.assignedTechnicianName;
+    return this.technicians().find((technician) => technician.fullName === name)?.id ?? null;
+  });
   protected readonly assignmentMessage = signal('');
   protected readonly assignmentError = signal('');
   protected readonly classificationBusy = signal(false);
@@ -104,7 +108,10 @@ export class TicketDetailPage implements OnInit {
   private loadTechnicians(): void {
     this.loadingTechnicians.set(true);
     this.technicianApi.listActive().subscribe({
-      next: (technicians) => this.technicians.set(technicians),
+      next: (technicians) => {
+        this.technicians.set(technicians);
+        this.selectedTechnicianId.set(this.currentTechnicianId());
+      },
       error: () => {
         this.assignmentError.set('No se pudo cargar la lista de técnicos activos.');
         this.loadingTechnicians.set(false);
@@ -113,36 +120,21 @@ export class TicketDetailPage implements OnInit {
     });
   }
 
-  protected selectTechnician(id: number | null): void {
-    this.selectedTechnicianId.set(id);
-    this.assignmentError.set('');
-    this.assignmentMessage.set('');
-  }
-
-  protected isCurrentTechnicianSelection(): boolean {
-    const selectedId = this.selectedTechnicianId();
-    const currentName = this.ticket()?.assignedTechnicianName;
-    return (
-      selectedId !== null &&
-      this.technicians().some(
-        (technician) => technician.id === selectedId && technician.fullName === currentName,
-      )
-    );
-  }
-
-  protected assignTechnician(): void {
-    const id = this.selectedTechnicianId();
-    if (id === null || this.isCurrentTechnicianSelection() || this.savingAssignment()) return;
+  protected assignTechnician(id: number | null): void {
+    const currentId = this.currentTechnicianId();
+    if (id === null || id === currentId || this.savingAssignment()) return;
     this.savingAssignment.set(true);
     this.assignmentError.set('');
     this.assignmentMessage.set('');
     this.api.assign(this.id, id).subscribe({
       next: (ticket) => {
         this.ticket.set(ticket);
+        this.selectedTechnicianId.set(id);
         this.assignmentMessage.set('Técnico asignado correctamente.');
         this.refreshDiscussion();
       },
       error: () => {
+        this.selectedTechnicianId.set(currentId);
         this.assignmentError.set('No se pudo asignar el técnico. Verifica que siga activo.');
         this.savingAssignment.set(false);
       },

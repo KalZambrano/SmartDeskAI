@@ -39,6 +39,10 @@ export class TicketListPage implements OnInit {
   protected readonly status = signal<TicketStatus | ''>('');
   protected readonly priority = signal<TicketPriority | ''>('');
   protected readonly categoryId = signal<number | null>(null);
+  protected readonly page = signal(0);
+  protected readonly totalElements = signal(0);
+  protected readonly totalPages = signal(0);
+  private readonly pageSize = 20;
   protected readonly statusOptions: { label: string; value: TicketStatus | '' }[] = [
     { label: 'Todos', value: '' },
     { label: 'Abierta', value: 'OPEN' },
@@ -71,6 +75,12 @@ export class TicketListPage implements OnInit {
   protected readonly heading = computed(() =>
     this.auth.user()?.role === 'TECHNICIAN' ? 'Mis incidencias asignadas' : 'Incidencias',
   );
+  protected readonly rangeStart = computed(() =>
+    this.totalElements() === 0 ? 0 : this.page() * this.pageSize + 1,
+  );
+  protected readonly rangeEnd = computed(() =>
+    Math.min((this.page() + 1) * this.pageSize, this.totalElements()),
+  );
 
   ngOnInit(): void {
     this.categoriesApi.listActive().subscribe({ next: (data) => this.categories.set(data) });
@@ -79,22 +89,22 @@ export class TicketListPage implements OnInit {
 
   protected setSearch(value: string): void {
     this.search.set(value);
-    this.load();
+    this.reloadFromStart();
   }
 
   protected setStatus(value: TicketStatus | ''): void {
     this.status.set(value);
-    this.load();
+    this.reloadFromStart();
   }
 
   protected setPriority(value: TicketPriority | ''): void {
     this.priority.set(value);
-    this.load();
+    this.reloadFromStart();
   }
 
   protected setCategory(value: number | null): void {
     this.categoryId.set(value);
-    this.load();
+    this.reloadFromStart();
   }
 
   protected clearFilters(): void {
@@ -102,6 +112,17 @@ export class TicketListPage implements OnInit {
     this.status.set('');
     this.priority.set('');
     this.categoryId.set(null);
+    this.reloadFromStart();
+  }
+
+  protected goToPage(page: number): void {
+    if (page < 0 || page >= this.totalPages() || page === this.page()) return;
+    this.page.set(page);
+    this.load();
+  }
+
+  private reloadFromStart(): void {
+    this.page.set(0);
     this.load();
   }
 
@@ -115,10 +136,16 @@ export class TicketListPage implements OnInit {
         status: this.status() || undefined,
         priority: this.priority() || undefined,
         categoryId: this.categoryId() ?? undefined,
+        page: this.page(),
+        size: this.pageSize,
       })
       .subscribe({
         next: (data) => {
-          if (id === this.requestId) this.tickets.set(data);
+          if (id === this.requestId) {
+            this.tickets.set(data.content);
+            this.totalElements.set(data.totalElements);
+            this.totalPages.set(data.totalPages);
+          }
         },
         error: () => {
           if (id === this.requestId) {
