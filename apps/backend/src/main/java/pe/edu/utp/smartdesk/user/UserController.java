@@ -5,13 +5,18 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import pe.edu.utp.smartdesk.assignment.TechnicianSpecialtyService;
 
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
     private final UserRepository users;
+    private final TechnicianSpecialtyService specialties;
     private final BCryptPasswordEncoder passwords=new BCryptPasswordEncoder();
-    public UserController(UserRepository users) { this.users=users; }
+    public UserController(UserRepository users, TechnicianSpecialtyService specialties) {
+        this.users=users;
+        this.specialties=specialties;
+    }
     @GetMapping
     public List<UserDto> list() {
         return users.findAll().stream().map(u->new UserDto(u.getId(),u.getFullName(),u.getEmail(),u.getRole().name(),u.isActive())).toList();
@@ -29,6 +34,25 @@ public class UserController {
         User u=users.save(new User(req.fullName().trim(),email,passwords.encode(req.password()),role));
         return new UserDto(u.getId(),u.getFullName(),u.getEmail(),u.getRole().name(),u.isActive());
     }
+    @GetMapping("/{id}/specialties")
+    public java.util.List<TechnicianSpecialtyService.SpecialtyDto> specialties(@PathVariable Long id) {
+        return specialties.list(id);
+    }
+    @PutMapping("/{id}/specialties")
+    public java.util.List<TechnicianSpecialtyService.SpecialtyDto> replaceSpecialties(
+            @PathVariable Long id, @RequestBody SpecialtyRequest request) {
+        return specialties.replace(id, request.categoryIds());
+    }
+    @PatchMapping("/{id}/active")
+    public UserDto setActive(@PathVariable Long id, @RequestBody ActiveRequest request) {
+        User user=users.findById(id).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND,"Usuario no encontrado"));
+        user.setActive(request.active());
+        user=users.save(user);
+        return new UserDto(user.getId(),user.getFullName(),user.getEmail(),user.getRole().name(),user.isActive());
+    }
     public record CreateUserRequest(String fullName,String email,String password,String role) {}
+    public record SpecialtyRequest(java.util.List<Long> categoryIds) {}
+    public record ActiveRequest(boolean active) {}
     public record UserDto(Long id,String fullName,String email,String role,boolean active) {}
 }
